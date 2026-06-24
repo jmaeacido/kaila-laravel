@@ -1,58 +1,88 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# KAILA Laravel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Modern Laravel rebuild of KAILA, a local services marketplace where clients post service needs and nearby providers send offers.
 
-## About Laravel
+## What Was Reused
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Old business flow: client posts request, matching providers receive urgent alerts, providers send offers/counteroffers, client accepts one, job moves through accepted/in-progress/provider-done/completion/revision/dispute/payment/rating states.
+- Old schema concepts: users, provider profiles, service requests, offers, request passes, job messages, message reactions, notifications, push tokens/subscriptions, reports, public feed posts.
+- Old platform rules: public signup is client/provider only; staff roles exist for admin/customer service; provider profile is required before offering; clients/providers only write accepted-job conversations; auto-confirm defaults to 48 hours; rating window defaults to 7 days.
+- Old PWA/native behavior map: browser notifications, service worker installability, and old Android FCM reconnection requirements are preserved in docs/config.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## What Was Rebuilt
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Laravel session auth with username/email login.
+- Laravel migrations, Eloquent models, services, validation, and protected routes.
+- Consumer-grade responsive UI with mobile bottom nav and desktop rail.
+- SSE in-app realtime notification stream.
+- Browser Web Push subscription storage and sender using `minishlink/web-push`.
+- PWA manifest and service worker.
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Local Setup
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run build
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Open `http://127.0.0.1:8000`.
 
-## Contributing
+Demo accounts after seeding:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- `client / Password123!`
+- `provider / Password123!`
+- `support / Password123!`
+- `admin / Password123!`
 
-## Code of Conduct
+## Web Push Setup
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Generate VAPID keys and put them in `.env`:
 
-## Security Vulnerabilities
+```bash
+vendor/bin/web-push generate:vapid
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Then set:
 
-## License
+```env
+VAPID_SUBJECT="${APP_URL}"
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Without VAPID keys, in-app SSE notifications still work and push subscriptions can be attempted only after keys are configured.
+
+## Native Android FCM Note
+
+The old app used Capacitor Android plus Firebase Cloud Messaging in:
+
+```text
+C:\laragon\www\kaila\android
+C:\laragon\www\kaila\socket\server.js
+```
+
+Native push should be reconnected when Android packaging is brought forward. The old backend expected `GOOGLE_APPLICATION_CREDENTIALS` or `FIREBASE_SERVICE_ACCOUNT_JSON` and sent high-priority FCM data messages for jobs, offers, messages, missed calls, and incoming calls.
+
+## Realtime
+
+The Laravel app uses `/stream` with Server-Sent Events for realtime in-app notification updates and falls back to periodic refresh in the browser. This avoids requiring a separate Socket.IO/Reverb service for the first Laravel rebuild. The old Socket.IO server remains untouched in `C:\laragon\www\kaila`.
+
+## Scheduled Workflow
+
+Run this from cron or Windows Task Scheduler to auto-release provider-completed jobs whose client review window has expired:
+
+```bash
+php artisan kaila:auto-confirm
+```
+
+## Tests
+
+```bash
+php artisan test
+npm run build
+```

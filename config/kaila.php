@@ -1,0 +1,48 @@
+<?php
+
+return [
+    'categories' => [
+        'Plumbing',
+        'Electrical',
+        'Carpentry',
+        'Welding',
+        'Aircon & Refrigeration',
+        'Appliance Repair',
+        'Computer & IT Services',
+        'Cellphone & Gadget Repair',
+        'Cleaning Services',
+        'Beauty Services',
+        'Tutoring & Education',
+        'Automotive Services',
+        'Motorcycle Services',
+        'Photography & Videography',
+        'Home Improvement',
+        'General Handyman',
+        'Other Services',
+    ],
+    'urgencies' => ['Now', 'Today', 'Tomorrow', 'This week', 'Flexible'],
+    'statuses' => [
+        'Posted',
+        'Offers Received',
+        'Countered',
+        'Accepted',
+        'In Progress',
+        'Provider Marked Done',
+        'Revision Requested',
+        'Payment Released',
+        'Rated / Closed',
+        'Cancelled',
+        'Disputed',
+        'Resolved',
+    ],
+    'auto_confirm_hours' => env('KAILA_AUTO_CONFIRM_HOURS', 48),
+    'rating_window_days' => env('KAILA_RATING_WINDOW_DAYS', 7),
+    'web_push' => [
+        'subject' => env('VAPID_SUBJECT', env('APP_URL', 'mailto:hello@example.com')),
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+    'native' => [
+        'fcm_reuse_note' => 'Old Android FCM pieces live in C:\\laragon\\www\\kaila\\android and old server sends via FIREBASE_SERVICE_ACCOUNT_JSON/GOOGLE_APPLICATION_CREDENTIALS. Reconnect those when Capacitor native packaging is brought forward.',
+    ],
+];

@@ -35,6 +35,7 @@ class MarketplaceController extends Controller
         return view('app', [
             'categories' => config('kaila.categories'),
             'urgencies' => config('kaila.urgencies'),
+            'address' => config('kaila.address'),
             'vapidPublicKey' => config('kaila.web_push.public_key'),
         ]);
     }

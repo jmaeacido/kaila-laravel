@@ -91,6 +91,81 @@ function fillSelects() {
     });
 }
 
+function uniqueSorted(items = []) {
+    return Array.from(new Set(items.map((item) => String(item || "").trim()).filter(Boolean)))
+        .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }));
+}
+
+function optionHtml(items = [], selected = "", placeholder = "") {
+    const options = uniqueSorted(items).map((item) => {
+        const isSelected = item === selected ? " selected" : "";
+        return `<option value="${escapeHtml(item)}"${isSelected}>${escapeHtml(item)}</option>`;
+    }).join("");
+    return `${placeholder ? `<option value="">${escapeHtml(placeholder)}</option>` : ""}${options}`;
+}
+
+function bindAddressDropdowns(root = document) {
+    const form = $("[data-register-form]", root);
+    if (!form || form.dataset.addressBound) return;
+
+    const address = cfg.address || {};
+    const region = $("[data-address-region]", form);
+    const province = $("[data-address-province]", form);
+    const city = $("[data-address-city]", form);
+    const barangay = $("[data-address-barangay]", form);
+    const area = $("[data-address-area]", form);
+    const detailed = $('[name="detailed_address"]', form);
+    if (!region || !province || !city || !barangay || !area) return;
+
+    const provincesForRegion = (regionName) => {
+        const provinces = address.provinces?.length ? address.provinces : [address.province];
+        return provinces.filter((item) => (address.provinceRegions?.[item] || address.region) === regionName);
+    };
+    const citiesForProvince = (provinceName) => address.provinceCities?.[provinceName] || address.cities || [address.city];
+    const barangaysForCity = (cityName) => address.cityBarangays?.[cityName] || address.barangays || [];
+
+    const syncArea = () => {
+        const parts = [
+            detailed?.value.trim() || "",
+            barangay.value,
+            city.value,
+            province.value,
+        ].filter(Boolean);
+        area.value = barangay.value ? parts.join(", ") : "";
+    };
+
+    const fillBarangays = (selected = "") => {
+        barangay.innerHTML = optionHtml(barangaysForCity(city.value), selected, "Select barangay");
+        if (selected && [...barangay.options].some((option) => option.value === selected)) barangay.value = selected;
+        syncArea();
+    };
+    const fillCities = (selected = "") => {
+        city.innerHTML = optionHtml(citiesForProvince(province.value), selected);
+        if (!city.value) city.value = city.options[0]?.value || "";
+        fillBarangays();
+    };
+    const fillProvinces = (selected = "") => {
+        province.innerHTML = optionHtml(provincesForRegion(region.value), selected);
+        if (!province.value) province.value = province.options[0]?.value || "";
+        fillCities(address.city);
+    };
+
+    region.innerHTML = optionHtml(address.regions || [address.region], address.region);
+    if (!region.value) region.value = region.options[0]?.value || "";
+    fillProvinces(address.province);
+
+    region.addEventListener("change", () => fillProvinces());
+    province.addEventListener("change", () => fillCities());
+    city.addEventListener("change", () => {
+        province.value = address.cityProvinces?.[city.value] || province.value;
+        region.value = address.cityRegions?.[city.value] || address.provinceRegions?.[province.value] || region.value;
+        fillBarangays();
+    });
+    barangay.addEventListener("change", syncArea);
+    detailed?.addEventListener("input", syncArea);
+    form.dataset.addressBound = "true";
+}
+
 function replaceUrl(path) {
     if (window.location.pathname !== path) {
         history.replaceState({ tab: pathTabs[path] || state.tab }, "", path);
@@ -352,6 +427,7 @@ function setRegisterStep(step, options = {}) {
 
 function bindAuth() {
     fillSelects();
+    bindAddressDropdowns();
     $$("[data-auth-mode]").forEach((button) => {
         button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
     });

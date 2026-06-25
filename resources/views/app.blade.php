@@ -19,6 +19,7 @@
             user: @json(auth()->user()),
             categories: @json($categories),
             urgencies: @json($urgencies),
+            address: @json($address),
             vapidPublicKey: @json($vapidPublicKey),
         };
     </script>
@@ -413,10 +414,11 @@
 
                                 <section class="register-section" data-step-section="2">
                                     <h2><i class="bi bi-geo-alt-fill"></i>Location</h2>
-                                    <div class="register-field"><i class="bi bi-geo-alt"></i><label>Region<select name="region"><option value="">Select region</option><option>National Capital Region</option><option>Region IV-A</option><option>Central Luzon</option></select></label><i class="bi bi-chevron-down"></i></div>
-                                    <div class="register-field"><i class="bi bi-shield-check"></i><label>Province<select name="province"><option value="">Select province</option><option>Metro Manila</option><option>Cavite</option><option>Laguna</option><option>Bulacan</option></select></label><i class="bi bi-chevron-down"></i></div>
-                                    <div class="register-field"><i class="bi bi-buildings"></i><label>City / Municipality<select name="city"><option value="">Select city / municipality</option><option>Quezon City</option><option>Manila</option><option>Makati</option><option>Pasig</option></select></label><i class="bi bi-chevron-down"></i></div>
-                                    <div class="register-field"><i class="bi bi-geo"></i><label>Barangay<input name="area" required placeholder="Select barangay"></label></div>
+                                    <div class="register-field"><i class="bi bi-geo-alt"></i><label>Region<select name="region" data-address-region></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-shield-check"></i><label>Province<select name="province" data-address-province></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-buildings"></i><label>City / Municipality<select name="city" data-address-city></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-geo"></i><label>Barangay<select required data-address-barangay><option value="">Select barangay</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <input type="hidden" name="area" required data-address-area>
                                     <div class="register-field"><i class="bi bi-house"></i><label>Detailed address <span>(optional)</span><input name="detailed_address" placeholder="House no., Street, Subdivision, Building, etc."></label></div>
 
                                     <h2><i class="bi bi-people-fill"></i>Role</h2>

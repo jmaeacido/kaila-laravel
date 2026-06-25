@@ -329,6 +329,27 @@ function setAuthMode(mode, options = {}) {
     }
 }
 
+function setRegisterStep(step, options = {}) {
+    const registerForm = $("[data-register-form]");
+    if (!registerForm) return;
+
+    const nextStep = String(step);
+    registerForm.dataset.step = nextStep;
+    $$("[data-step-indicator]", registerForm).forEach((item) => {
+        item.classList.toggle("is-active", item.dataset.stepIndicator === nextStep);
+        item.classList.toggle("is-complete", Number(item.dataset.stepIndicator) < Number(nextStep));
+    });
+
+    if (options.updateUrl) {
+        const path = nextStep === "2" ? "/register#step2" : "/register";
+        options.replace ? history.replaceState({ registerStep: nextStep }, "", path) : history.pushState({ registerStep: nextStep }, "", path);
+    }
+
+    if (options.scrollToTop) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+}
+
 function bindAuth() {
     fillSelects();
     $$("[data-auth-mode]").forEach((button) => {
@@ -340,13 +361,6 @@ function bindAuth() {
 
     const registerForm = $("[data-register-form]");
     if (registerForm) {
-        const setRegisterStep = (step) => {
-            registerForm.dataset.step = String(step);
-            $$("[data-step-indicator]", registerForm).forEach((item) => {
-                item.classList.toggle("is-active", item.dataset.stepIndicator === String(step));
-                item.classList.toggle("is-complete", Number(item.dataset.stepIndicator) < Number(step));
-            });
-        };
         const syncContactChannel = () => {
             const checked = $('input[name="contact_channel_card"]:checked', registerForm);
             const field = $('[name="preferred_contact_channel"]', registerForm);
@@ -359,7 +373,12 @@ function bindAuth() {
         };
 
         if (window.location.hash === "#step2") setRegisterStep(2);
-        $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2));
+        $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2, { updateUrl: true, scrollToTop: true }));
+        $(".register-back")?.addEventListener("click", (event) => {
+            if (registerForm.dataset.step !== "2") return;
+            event.preventDefault();
+            setRegisterStep(1, { updateUrl: true, replace: true, scrollToTop: true });
+        });
         syncContactChannel();
         syncBestContactTime();
 
@@ -836,6 +855,9 @@ window.addEventListener("popstate", () => {
     if (!state.user) {
         const mode = window.location.pathname === authPaths.register ? "register" : "login";
         setAuthMode(mode, { updateUrl: false });
+        if (mode === "register") {
+            setRegisterStep(window.location.hash === "#step2" ? 2 : 1);
+        }
         return;
     }
 

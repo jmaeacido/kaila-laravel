@@ -42,6 +42,23 @@ return [
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
+    'auth' => [
+        'google_client_id' => env('KAILA_GOOGLE_CLIENT_ID'),
+        'facebook_app_id' => env('KAILA_FACEBOOK_APP_ID'),
+        'facebook_app_secret' => env('KAILA_FACEBOOK_APP_SECRET'),
+    ],
+    'rtc' => [
+        'ice_servers' => json_decode(env('KAILA_RTC_ICE_SERVERS', '[{"urls":"stun:stun.l.google.com:19302"}]'), true) ?: [
+            ['urls' => 'stun:stun.l.google.com:19302'],
+        ],
+    ],
+    'route_distance_url' => env('KAILA_ROUTE_DISTANCE_URL', 'https://router.project-osrm.org/route/v1/driving'),
+    'mobile' => [
+        'latest_version_code' => env('KAILA_ANDROID_LATEST_VERSION_CODE', 0),
+        'latest_version_name' => env('KAILA_ANDROID_LATEST_VERSION_NAME'),
+        'apk_url' => env('KAILA_ANDROID_APK_URL'),
+        'release_notes' => env('KAILA_ANDROID_RELEASE_NOTES'),
+    ],
     'native' => [
         'fcm_reuse_note' => 'Old Android FCM pieces live in C:\\laragon\\www\\kaila\\android and old server sends via FIREBASE_SERVICE_ACCOUNT_JSON/GOOGLE_APPLICATION_CREDENTIALS. Reconnect those when Capacitor native packaging is brought forward.',
     ],

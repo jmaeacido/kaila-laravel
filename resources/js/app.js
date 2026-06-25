@@ -1,9 +1,30 @@
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
 const cfg = window.KAILA || {};
+const tabPaths = {
+    home: "/home",
+    jobs: "/jobs",
+    post: "/post",
+    messages: "/messages",
+    notifications: "/notifications",
+    settings: "/settings",
+};
+const pathTabs = {
+    "/": "home",
+    "/home": "home",
+    "/jobs": "jobs",
+    "/post": "post",
+    "/messages": "messages",
+    "/notifications": "notifications",
+    "/settings": "settings",
+};
+const authPaths = {
+    login: "/login",
+    register: "/register",
+};
 const state = {
     user: cfg.user,
     data: null,
-    tab: "home",
+    tab: pathTabs[window.location.pathname] || "home",
     activeRole: localStorage.getItem("kaila.activeRole") || "",
     selectedRequestId: null,
     jobFilter: "all",
@@ -67,6 +88,18 @@ function fillSelects() {
     });
 }
 
+function replaceUrl(path) {
+    if (window.location.pathname !== path) {
+        history.replaceState({ tab: pathTabs[path] || state.tab }, "", path);
+    }
+}
+
+function pushUrl(path, payload = {}) {
+    if (window.location.pathname !== path) {
+        history.pushState(payload, "", path);
+    }
+}
+
 function formData(form) {
     const data = Object.fromEntries(new FormData(form).entries());
     $$('input[type="checkbox"]', form).forEach((input) => {
@@ -75,22 +108,39 @@ function formData(form) {
     return data;
 }
 
+function setAuthMode(mode, options = {}) {
+    if (!$("#login-form") && !$("#register-form")) return;
+
+    $$("[data-auth-mode]").forEach((item) => item.classList.toggle("active", item.dataset.authMode === mode));
+    const loginForm = $("#login-form");
+    const registerForm = $("#register-form");
+    if (loginForm) loginForm.hidden = mode !== "login";
+    if (registerForm) registerForm.hidden = mode !== "register";
+    const authMessage = $("[data-auth-message]");
+    if (authMessage) authMessage.textContent = "";
+
+    if (options.updateUrl !== false) {
+        const path = authPaths[mode] || "/";
+        options.replace ? replaceUrl(path) : pushUrl(path, { authMode: mode });
+    }
+}
+
 function bindAuth() {
     fillSelects();
     $$("[data-auth-mode]").forEach((button) => {
-        button.addEventListener("click", () => {
-            $$("[data-auth-mode]").forEach((item) => item.classList.toggle("active", item === button));
-            $("#login-form").hidden = button.dataset.authMode !== "login";
-            $("#register-form").hidden = button.dataset.authMode !== "register";
-            $("[data-auth-message]").textContent = "";
-        });
+        button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
     });
+
+    if (!state.user) {
+        const initialMode = window.location.pathname === authPaths.register ? "register" : "login";
+        setAuthMode(initialMode, { updateUrl: [authPaths.login, authPaths.register].includes(window.location.pathname), replace: true });
+    }
 
     $("#login-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
         try {
             await api("/auth/login", { method: "POST", body: formData(event.currentTarget) });
-            location.reload();
+            window.location.assign("/home");
         } catch (error) {
             $("[data-auth-message]").textContent = error.message;
         }
@@ -100,7 +150,7 @@ function bindAuth() {
         event.preventDefault();
         try {
             await api("/auth/register", { method: "POST", body: formData(event.currentTarget) });
-            location.reload();
+            window.location.assign("/home");
         } catch (error) {
             $("[data-auth-message]").textContent = error.message;
         }
@@ -125,10 +175,16 @@ async function refresh() {
     render();
 }
 
-function setTab(tab) {
-    state.tab = tab;
-    $$("[data-panel]").forEach((panel) => panel.hidden = panel.dataset.panel !== tab);
-    $$("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === tab));
+function setTab(tab, options = {}) {
+    const nextTab = tabPaths[tab] ? tab : "home";
+    if (state.user && options.updateUrl !== false) {
+        const path = tabPaths[nextTab] || "/home";
+        options.replace ? replaceUrl(path) : pushUrl(path, { tab: nextTab });
+    }
+
+    state.tab = nextTab;
+    $$("[data-panel]").forEach((panel) => panel.hidden = panel.dataset.panel !== nextTab);
+    $$("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === nextTab));
     $("#screen-title").textContent = {
         home: "Today on KAILA",
         jobs: "Jobs",
@@ -136,7 +192,7 @@ function setTab(tab) {
         messages: "Messages",
         notifications: "Notifications",
         settings: "Profile",
-    }[tab] || "KAILA";
+    }[nextTab] || "KAILA";
 }
 
 function statusClass(status) {
@@ -423,7 +479,7 @@ function bindApp() {
     });
     $("[data-logout]")?.addEventListener("click", async () => {
         await api("/auth/logout", { method: "POST", body: {} });
-        location.reload();
+        window.location.assign("/login");
     });
     $("[data-mark-read]")?.addEventListener("click", async () => {
         await api("/api/notifications/read", { method: "POST", body: {} });
@@ -526,12 +582,22 @@ async function registerServiceWorker() {
     }
 }
 
+window.addEventListener("popstate", () => {
+    if (!state.user) {
+        const mode = window.location.pathname === authPaths.register ? "register" : "login";
+        setAuthMode(mode, { updateUrl: false });
+        return;
+    }
+
+    setTab(pathTabs[window.location.pathname] || "home", { updateUrl: false });
+});
+
 bindAuth();
 bindApp();
 registerServiceWorker();
 if (state.user) {
     refresh().then(() => {
-        setTab("home");
+        setTab(pathTabs[window.location.pathname] || "home", { replace: true });
         startSse();
         setInterval(refresh, 20000);
     }).catch((error) => toast(error.message));

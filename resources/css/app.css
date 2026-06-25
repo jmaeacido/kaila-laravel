@@ -1611,8 +1611,13 @@ input:focus, select:focus, textarea:focus {
     .register-mobile-social {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 14px;
+        column-gap: 14px;
+        row-gap: 24px;
         margin-top: 24px;
+    }
+
+    .register-mobile-social .social-button {
+        margin-top: 0;
     }
 
     .register-mobile-social > span {
@@ -2594,6 +2599,11 @@ input:focus, select:focus, textarea:focus {
     .client-register-form[data-step="1"] .register-submitbar,
     .client-register-form[data-step="1"] .register-bottom-login {
         display: none;
+    }
+
+    .register-mobile-social.mobile-only {
+        display: grid;
+        row-gap: 24px;
     }
 
     .register-submitbar .landing-primary {

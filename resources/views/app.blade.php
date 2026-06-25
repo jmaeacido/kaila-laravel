@@ -256,6 +256,108 @@
                             <p class="desktop-only">&copy; 2025 KAILA. All rights reserved.</p>
                         </footer>
                     </section>
+                @elseif (request()->is('register'))
+                <section class="client-register-page">
+                    <header class="register-topbar">
+                        <a class="register-back mobile-only" href="/" aria-label="Back"><i class="bi bi-chevron-left"></i></a>
+                        <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                        <div class="register-login desktop-only">
+                            <span>Already have an account?</span>
+                            <a class="landing-login" href="/login">Login</a>
+                        </div>
+                    </header>
+
+                    <div class="client-register-layout">
+                        <aside class="register-side desktop-only">
+                            <h1>Join KAILA<br>and get things<br>done.</h1>
+                            <p>Create your account to post requests, receive offers, chat with providers, and track your jobs with ease.</p>
+                            <img src="/assets/registration/client-registration-illustration.png" alt="" aria-hidden="true">
+                            <div class="register-benefits">
+                                <article><span class="feature-icon shield"><i class="bi bi-shield-check"></i></span><p><b>Trusted local professionals</b><br>All providers are verified and reviewed by clients.</p></article>
+                                <article><span class="feature-icon chat"><i class="bi bi-chat-square-text"></i></span><p><b>Compare and choose</b><br>Review offers, ratings, and prices before hiring.</p></article>
+                                <article><span class="feature-icon scales"><i class="bi bi-telephone"></i></span><p><b>Chat, call, and track</b><br>Communicate easily and track job progress in real time.</p></article>
+                                <article><span class="feature-icon pin"><i class="bi bi-geo-alt"></i></span><p><b>Built for your area</b><br>Local service marketplace made for you.</p></article>
+                            </div>
+                        </aside>
+
+                        <main class="register-panel">
+                            <div class="register-heading">
+                                <a class="landing-logo mobile-only" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <h1>Create Account (Client)</h1>
+                                <p>Join KAILA and get things done.</p>
+                            </div>
+
+                            <form id="register-form" class="client-register-form" data-register-form data-step="1">
+                                <input type="hidden" name="role" value="client">
+                                <input type="hidden" name="category" value="General local service">
+
+                                <div class="register-steps" aria-label="Registration progress">
+                                    <span class="step is-active" data-step-indicator="1"><b>1</b>Account &amp; Contact</span>
+                                    <i></i>
+                                    <span class="step" data-step-indicator="2"><b>2</b>Location &amp; Consent</span>
+                                </div>
+
+                                <section class="register-section" data-step-section="1">
+                                    <h2><i class="bi bi-person"></i>Account Details</h2>
+                                    <div class="register-field"><i class="bi bi-person"></i><label>Full name<input name="name" required autocomplete="name" placeholder="e.g. Juan Dela Cruz"></label></div>
+                                    <div class="register-field"><i class="bi bi-envelope"></i><label>Email address<input name="email" type="email" autocomplete="email" placeholder="e.g. juan@email.com"></label></div>
+                                    <div class="register-field"><i class="bi bi-person-circle"></i><label>Username<input name="username" required minlength="3" autocomplete="username" placeholder="e.g. juandelacruz"></label></div>
+                                    <div class="register-field"><i class="bi bi-lock"></i><label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Create a strong password"></label><i class="bi bi-eye-slash"></i></div>
+                                    <p class="password-hint"><span></span>At least 8 characters with letters and numbers</p>
+
+                                    <h2><i class="bi bi-telephone-fill"></i>Contact Details</h2>
+                                    <div class="register-field"><i class="bi bi-telephone"></i><label>Contact number<input name="contact_number" inputmode="tel" placeholder="09XX XXX XXXX"></label></div>
+                                    <div class="register-field"><i class="bi bi-link-45deg"></i><label>Messenger / Social link (optional)<input name="messenger_link" placeholder="e.g. facebook.com/juandelacruz"></label></div>
+                                    <div class="register-field"><i class="bi bi-clock"></i><label>Preferred contact channel<select name="preferred_contact_channel"><option value="">Choose your preferred channel</option><option>Call</option><option>SMS</option><option>Messenger</option><option>Email</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="contact-choice-grid" aria-label="Preferred contact channel options">
+                                        <label class="choice-card is-selected"><input type="radio" name="contact_channel_card" value="Call" checked><i class="bi bi-telephone-fill"></i><span>Call</span><b><i class="bi bi-check"></i></b></label>
+                                        <label class="choice-card"><input type="radio" name="contact_channel_card" value="SMS"><i class="bi bi-chat-square-dots"></i><span>SMS</span></label>
+                                        <label class="choice-card"><input type="radio" name="contact_channel_card" value="Messenger"><i class="bi bi-messenger"></i><span>Messenger</span></label>
+                                        <label class="choice-card"><input type="radio" name="contact_channel_card" value="Email"><i class="bi bi-envelope"></i><span>Email</span></label>
+                                    </div>
+                                    <div class="register-field"><i class="bi bi-clock"></i><label>Best time to contact you<input name="best_contact_time" placeholder="e.g. Weekdays, 9:00 AM - 6:00 PM"></label></div>
+                                    <button class="register-next mobile-only" type="button" data-register-next>Continue <i class="bi bi-arrow-right"></i></button>
+                                    <div class="register-mobile-social mobile-only">
+                                        <span>or sign up with</span>
+                                        <button class="social-button" type="button"><i class="bi bi-google"></i>Google</button>
+                                        <button class="social-button" type="button"><i class="bi bi-facebook"></i>Facebook</button>
+                                        <p>Already have an account? <a href="/login">Login</a></p>
+                                    </div>
+                                </section>
+
+                                <section class="register-section" data-step-section="2">
+                                    <h2><i class="bi bi-geo-alt-fill"></i>Location</h2>
+                                    <div class="register-field"><i class="bi bi-geo-alt"></i><label>Region<select name="region"><option value="">Select region</option><option>National Capital Region</option><option>Region IV-A</option><option>Central Luzon</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-shield-check"></i><label>Province<select name="province"><option value="">Select province</option><option>Metro Manila</option><option>Cavite</option><option>Laguna</option><option>Bulacan</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-buildings"></i><label>City / Municipality<select name="city"><option value="">Select city / municipality</option><option>Quezon City</option><option>Manila</option><option>Makati</option><option>Pasig</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <div class="register-field"><i class="bi bi-geo"></i><label>Barangay<input name="area" required placeholder="Select barangay"></label></div>
+                                    <div class="register-field"><i class="bi bi-house"></i><label>Detailed address <span>(optional)</span><input name="detailed_address" placeholder="House no., Street, Subdivision, Building, etc."></label></div>
+
+                                    <h2><i class="bi bi-people-fill"></i>Role</h2>
+                                    <p class="section-note">Select your role on KAILA</p>
+                                    <div class="role-card-grid">
+                                        <label class="role-card is-selected"><input type="radio" name="role_preview" value="client" checked><i class="bi bi-person-fill"></i><b>Client</b><span>I need to hire a service provider</span><em><i class="bi bi-check"></i></em></label>
+                                        <label class="role-card"><input type="radio" name="role_preview" value="provider"><i class="bi bi-person-workspace"></i><b>Provider</b><span>I provide services to customers</span></label>
+                                    </div>
+
+                                    <h2><i class="bi bi-shield-check"></i>Consent &amp; Agreements</h2>
+                                    <label class="register-check"><input type="checkbox" name="terms_consent" value="1" required checked><span>I agree to KAILA's <a href="/terms">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.</span></label>
+                                    <label class="register-check"><input type="checkbox" name="data_privacy_consent" value="1" required checked><span>I consent to the collection and processing of my personal data in accordance with the Privacy Act of 2012.</span></label>
+                                    <div class="privacy-note"><i class="bi bi-lock"></i><p><b>Your privacy matters</b><br>We use your information only to provide and improve our services. We never sell your data.</p></div>
+                                </section>
+
+                                <div class="register-submitbar">
+                                    <button class="landing-primary" type="submit">Create Account <i class="bi bi-arrow-right desktop-only"></i></button>
+                                    <span>or sign up with</span>
+                                    <button class="social-button" type="button"><i class="bi bi-google"></i>Google</button>
+                                    <button class="social-button" type="button"><i class="bi bi-facebook"></i>Facebook</button>
+                                </div>
+                                <p class="register-bottom-login mobile-only">Already have an account? <a href="/login">Login</a></p>
+                                <p class="form-note" data-auth-message></p>
+                            </form>
+                        </main>
+                    </div>
+                </section>
                 @else
                 <section class="auth-grid">
                     <div class="auth-intro">

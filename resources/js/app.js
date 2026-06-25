@@ -131,6 +131,29 @@ function bindAuth() {
         button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
     });
 
+    const registerForm = $("[data-register-form]");
+    if (registerForm) {
+        const setRegisterStep = (step) => {
+            registerForm.dataset.step = String(step);
+            $$("[data-step-indicator]", registerForm).forEach((item) => {
+                item.classList.toggle("is-active", item.dataset.stepIndicator === String(step));
+                item.classList.toggle("is-complete", Number(item.dataset.stepIndicator) < Number(step));
+            });
+        };
+
+        if (window.location.hash === "#step2") setRegisterStep(2);
+        $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2));
+
+        $$(".choice-card input, .role-card input", registerForm).forEach((input) => {
+            input.addEventListener("change", () => {
+                const group = input.name;
+                $$(`input[name="${group}"]`, registerForm).forEach((item) => {
+                    item.closest(".choice-card, .role-card")?.classList.toggle("is-selected", item.checked);
+                });
+            });
+        });
+    }
+
     if (!state.user) {
         const initialMode = window.location.pathname === authPaths.register ? "register" : "login";
         setAuthMode(initialMode, { updateUrl: [authPaths.login, authPaths.register].includes(window.location.pathname), replace: true });

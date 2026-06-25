@@ -1038,6 +1038,534 @@ input:focus, select:focus, textarea:focus {
     margin-top: 26px;
 }
 
+.client-register-page {
+    --register-blue: #0967f2;
+    --register-navy: #051b4f;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #fbfdff 0%, #eef7ff 100%);
+    color: var(--register-navy);
+}
+
+.register-topbar {
+    height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 42px;
+    background: rgba(255, 255, 255, .9);
+    border-bottom: 1px solid #dbe8f6;
+}
+
+.register-login {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: #1c2d4d;
+    font-weight: 700;
+}
+
+.client-register-layout {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    width: min(1280px, 100%);
+    margin: 0 auto;
+}
+
+.register-side {
+    min-height: calc(100vh - 88px);
+    padding: 70px 42px 42px;
+    background:
+        radial-gradient(circle at 22% 42%, rgba(9, 103, 242, .08), transparent 24%),
+        linear-gradient(180deg, #f4faff, #eaf5ff);
+}
+
+.register-side h1 {
+    margin: 0;
+    color: var(--register-navy);
+    font-size: 2.18rem;
+    line-height: 1.18;
+    font-weight: 900;
+}
+
+.register-side > p {
+    margin: 24px 0 26px;
+    color: #3e5177;
+    font-size: 1rem;
+    line-height: 1.55;
+    font-weight: 600;
+}
+
+.register-side img {
+    width: 100%;
+    margin: 0 0 32px;
+    display: block;
+}
+
+.register-benefits {
+    display: grid;
+    gap: 25px;
+}
+
+.register-benefits article {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: 16px;
+}
+
+.register-benefits .feature-icon {
+    width: 52px;
+    height: 52px;
+    border: 1px solid #b8d6ff;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .75);
+    font-size: 1.35rem;
+}
+
+.register-benefits p {
+    margin: 0;
+    color: #4e5f82;
+    line-height: 1.45;
+    font-weight: 600;
+}
+
+.register-benefits b {
+    color: var(--register-navy);
+}
+
+.register-panel {
+    margin: 0 0 0;
+    border: 1px solid #d8e3f0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .9);
+    box-shadow: 0 18px 48px rgba(7, 36, 82, .06);
+    padding: 26px 30px;
+}
+
+.register-heading {
+    margin-bottom: 26px;
+}
+
+.register-heading h1 {
+    margin: 0 0 8px;
+    color: var(--register-navy);
+    font-size: 1.58rem;
+    line-height: 1.2;
+    font-weight: 900;
+}
+
+.register-heading p {
+    margin: 0;
+    color: #344668;
+    font-weight: 600;
+}
+
+.client-register-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 36px;
+}
+
+.register-steps {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #687897;
+    font-weight: 800;
+}
+
+.register-steps i {
+    width: 140px;
+    height: 1px;
+    background: #aebfdb;
+}
+
+.step {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.step b {
+    width: 30px;
+    height: 30px;
+    display: inline-grid;
+    place-items: center;
+    border: 2px solid #c8d6ea;
+    border-radius: 50%;
+    color: #657593;
+    background: #fff;
+}
+
+.step.is-active {
+    color: var(--register-blue);
+}
+
+.step.is-active b,
+.step.is-complete b {
+    border-color: var(--register-blue);
+    color: #fff;
+    background: var(--register-blue);
+}
+
+.register-section {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+}
+
+.register-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 3px;
+    color: var(--register-navy);
+    font-size: .98rem;
+    font-weight: 900;
+}
+
+.register-section h2 i {
+    color: var(--register-blue);
+    font-size: 1.25rem;
+}
+
+.register-field {
+    min-height: 52px;
+    display: grid;
+    grid-template-columns: 34px 1fr 24px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #d4e0ee;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .96);
+    padding: 8px 14px;
+}
+
+.register-field > i {
+    color: #263955;
+    font-size: 1.2rem;
+}
+
+.register-field label {
+    gap: 3px;
+    color: #101d36;
+    font-size: .76rem;
+    font-weight: 900;
+}
+
+.register-field label span {
+    color: #6c7891;
+    font-weight: 500;
+}
+
+.register-field input,
+.register-field select {
+    min-height: 22px;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    color: #566780;
+    background: transparent;
+    box-shadow: none;
+    font-size: .92rem;
+    font-weight: 500;
+}
+
+.register-field input:focus,
+.register-field select:focus {
+    outline: 0;
+}
+
+.register-field select {
+    appearance: none;
+}
+
+.password-hint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: -2px 0 12px;
+    color: #64738f;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.password-hint span {
+    width: 28px;
+    height: 4px;
+    border-radius: 999px;
+    background: #d9e1eb;
+}
+
+.contact-choice-grid,
+.role-card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.choice-card,
+.role-card {
+    position: relative;
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    min-height: 68px;
+    border: 1px solid #d4e0ee;
+    border-radius: 8px;
+    background: #fff;
+    color: #34425e;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.choice-card input,
+.role-card input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.choice-card i {
+    color: #263955;
+    font-size: 1.38rem;
+}
+
+.choice-card.is-selected,
+.role-card.is-selected {
+    border-color: var(--register-blue);
+    box-shadow: 0 0 0 1px rgba(9, 103, 242, .16);
+}
+
+.choice-card.is-selected i,
+.role-card.is-selected i {
+    color: var(--register-blue);
+}
+
+.choice-card b,
+.role-card em {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--register-blue);
+    font-style: normal;
+}
+
+.role-card-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.role-card {
+    min-height: 112px;
+    padding: 14px;
+    text-align: center;
+}
+
+.role-card > i {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--register-blue);
+    background: #eef5ff;
+    font-size: 1.45rem;
+}
+
+.role-card.is-selected > i {
+    color: #fff;
+    background: var(--register-blue);
+}
+
+.role-card b {
+    color: var(--register-navy);
+}
+
+.role-card span {
+    color: #667590;
+    line-height: 1.35;
+    font-size: .88rem;
+}
+
+.section-note {
+    margin: -8px 0 0;
+    color: #334767;
+    font-weight: 600;
+}
+
+.register-check {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: start;
+    gap: 12px;
+    color: #334767;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.register-check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--register-blue);
+}
+
+.register-check a {
+    color: var(--register-blue);
+    text-decoration: none;
+    font-weight: 900;
+}
+
+.privacy-note {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #e7f3ff, #edf7ff);
+    padding: 14px 16px;
+}
+
+.privacy-note i {
+    color: var(--register-blue);
+    font-size: 1.5rem;
+}
+
+.privacy-note p {
+    margin: 0;
+    color: #5d6b84;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.privacy-note b {
+    color: var(--register-blue);
+}
+
+.register-submitbar {
+    grid-column: 1 / -1;
+    min-height: 86px;
+    display: grid;
+    grid-template-columns: minmax(260px, 310px) auto 1fr 1fr;
+    align-items: center;
+    gap: 14px;
+    margin: 2px -30px -30px;
+    border-top: 1px solid #d8e3f0;
+    padding: 18px 30px;
+    background: rgba(255, 255, 255, .88);
+}
+
+.register-submitbar .landing-primary {
+    min-height: 50px;
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    white-space: nowrap;
+}
+
+.register-submitbar > span {
+    color: #53627a;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.social-button {
+    width: 100%;
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 1px solid #d4e0ee;
+    border-radius: 8px;
+    color: #1d2d4b;
+    background: #fff;
+    font-weight: 800;
+}
+
+.social-button .bi-google {
+    color: #4285f4;
+}
+
+.social-button .bi-facebook {
+    color: #1877f2;
+}
+
+.register-bottom-login,
+.register-mobile-social,
+.client-register-form > .form-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    text-align: center;
+}
+
+.register-bottom-login a {
+    color: var(--register-blue);
+    text-decoration: none;
+    font-weight: 900;
+}
+
+    .register-next {
+        min-height: 54px;
+        border: 0;
+        border-radius: 8px;
+        color: #fff;
+        background: var(--register-blue);
+        font-size: 1rem;
+        font-weight: 900;
+    }
+
+    .register-mobile-social {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 24px;
+    }
+
+    .register-mobile-social > span {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: #667590;
+        font-weight: 700;
+    }
+
+    .register-mobile-social > span::before,
+    .register-mobile-social > span::after {
+        content: "";
+        width: 88px;
+        height: 1px;
+        background: #d9e3ef;
+    }
+
+    .register-mobile-social p {
+        grid-column: 1 / -1;
+        margin: 18px 0 0;
+        color: #3c4962;
+        text-align: center;
+    }
+
+    .register-mobile-social a {
+        color: var(--register-blue);
+        text-decoration: none;
+        font-weight: 900;
+    }
+
+.register-mobile-social {
+    display: none;
+}
+
 .mobile-only,
 .mobile-title,
 .mobile-tagline,
@@ -1454,6 +1982,226 @@ input:focus, select:focus, textarea:focus {
     .legal-action {
         min-height: 54px;
     }
+
+    .client-register-page {
+        min-height: 100vh;
+        padding: 0 0 28px;
+        background: linear-gradient(180deg, #f8fcff 0%, #eef7ff 100%);
+    }
+
+    .register-topbar {
+        width: min(100% - 48px, 540px);
+        height: 118px;
+        margin: 0 auto;
+        padding: 0;
+        justify-content: center;
+        position: relative;
+        border-bottom: 0;
+        background: transparent;
+    }
+
+    .register-topbar::before {
+        content: "9:41";
+        position: absolute;
+        top: 28px;
+        left: 14px;
+        color: #000;
+        font-size: 1.18rem;
+        font-weight: 900;
+    }
+
+    .register-back {
+        position: absolute;
+        left: 0;
+        bottom: 16px;
+        color: var(--register-navy);
+        font-size: 1.35rem;
+    }
+
+    .register-topbar > .landing-logo {
+        display: none;
+    }
+
+    .client-register-layout {
+        display: block;
+        width: min(100% - 48px, 540px);
+    }
+
+    .register-panel {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .register-heading {
+        text-align: center;
+        margin-bottom: 28px;
+    }
+
+    .register-heading .landing-logo {
+        display: inline-flex;
+        margin-bottom: 24px;
+    }
+
+    .register-heading .landing-logo img {
+        width: 170px;
+    }
+
+    .register-heading h1 {
+        font-size: 1.52rem;
+    }
+
+    .register-heading p {
+        color: #53627a;
+    }
+
+    .client-register-form {
+        display: block;
+    }
+
+    .register-steps {
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 28px;
+        font-size: .92rem;
+    }
+
+    .register-steps i {
+        width: 60px;
+    }
+
+    .step b {
+        width: 30px;
+        height: 30px;
+    }
+
+    .client-register-form[data-step="1"] [data-step-section="2"],
+    .client-register-form[data-step="2"] [data-step-section="1"] {
+        display: none;
+    }
+
+    .client-register-form[data-step="2"] [data-step-indicator="1"] b {
+        font-size: 0;
+    }
+
+    .client-register-form[data-step="2"] [data-step-indicator="1"] b::before {
+        content: "\F26E";
+        font-family: "bootstrap-icons";
+        font-size: 1rem;
+    }
+
+    .client-register-form[data-step="2"] [data-step-indicator="1"] {
+        color: #55647e;
+    }
+
+    .client-register-form[data-step="2"] [data-step-indicator="2"] {
+        color: var(--register-blue);
+    }
+
+    .client-register-form[data-step="2"] [data-step-indicator="2"] b {
+        border-color: var(--register-blue);
+        color: #fff;
+        background: var(--register-blue);
+    }
+
+    .register-section {
+        gap: 16px;
+    }
+
+    .register-section h2 {
+        margin: 2px 0 4px;
+        font-size: 1.05rem;
+    }
+
+    .register-field {
+        min-height: 66px;
+        border-radius: 8px;
+        padding: 10px 16px;
+    }
+
+    .password-hint {
+        margin: -4px 0 22px;
+    }
+
+    .password-hint span {
+        width: 50px;
+    }
+
+    .contact-choice-grid {
+        gap: 14px;
+    }
+
+    .choice-card {
+        min-height: 82px;
+    }
+
+    .role-card {
+        min-height: 146px;
+    }
+
+    .privacy-note {
+        margin-top: 10px;
+        border-radius: 10px;
+        padding: 18px;
+    }
+
+    .register-submitbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 28px 0 0;
+        border-top: 0;
+        padding: 0;
+        background: transparent;
+    }
+
+    .client-register-form[data-step="1"] .register-submitbar,
+    .client-register-form[data-step="1"] .register-bottom-login {
+        display: none;
+    }
+
+    .register-submitbar .landing-primary {
+        grid-column: 1 / -1;
+        min-height: 56px;
+        display: flex;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 1.08rem;
+    }
+
+    .register-submitbar > span {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        color: #667590;
+    }
+
+    .register-submitbar > span::before,
+    .register-submitbar > span::after {
+        content: "";
+        width: 90px;
+        height: 1px;
+        background: #d9e3ef;
+    }
+
+    .social-button {
+        min-height: 56px;
+        border-radius: 8px;
+    }
+
+    .register-bottom-login {
+        display: block;
+        margin-top: 28px;
+        color: #3c4962;
+    }
+
+    .client-register-form > .form-note {
+        margin-top: 12px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -1600,5 +2348,73 @@ input:focus, select:focus, textarea:focus {
         min-height: 62px;
         padding-bottom: 18px;
         font-size: .88rem;
+    }
+
+    .register-topbar,
+    .client-register-layout {
+        width: calc(100% - 40px);
+    }
+
+    .register-heading .landing-logo img {
+        width: 152px;
+    }
+
+    .register-heading h1 {
+        font-size: 1.38rem;
+    }
+
+    .register-steps {
+        font-size: .8rem;
+        gap: 8px;
+    }
+
+    .register-steps i {
+        width: 42px;
+    }
+
+    .step {
+        gap: 8px;
+    }
+
+    .register-field {
+        min-height: 64px;
+        grid-template-columns: 30px 1fr 20px;
+    }
+
+    .contact-choice-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .choice-card {
+        min-height: 80px;
+        font-size: .84rem;
+    }
+
+    .role-card-grid {
+        gap: 14px;
+    }
+
+    .role-card {
+        min-height: 132px;
+        padding: 14px 10px;
+    }
+
+    .role-card span {
+        font-size: .78rem;
+    }
+
+    .register-check {
+        font-size: .86rem;
+    }
+
+    .register-submitbar > span::before,
+    .register-submitbar > span::after {
+        width: 74px;
+    }
+
+    .register-mobile-social > span::before,
+    .register-mobile-social > span::after {
+        width: 74px;
     }
 }

@@ -24,6 +24,8 @@ Route::post('/api/register', [AuthController::class, 'register'])->middleware('g
 Route::post('/api/login', [AuthController::class, 'login'])->middleware('guest');
 Route::post('/api/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('guest');
 Route::get('/api/auth/config', [MarketplaceController::class, 'authConfig']);
+Route::post('/api/auth/social/profile', [AuthController::class, 'socialProfile'])->middleware('guest');
+Route::post('/api/auth/social', [AuthController::class, 'social'])->middleware('guest');
 Route::get('/api/rtc-config', [MarketplaceController::class, 'rtcConfig']);
 Route::get('/api/mobile-update', [MarketplaceController::class, 'mobileUpdate']);
 Route::get('/api/mobile-update/apk', [MarketplaceController::class, 'mobileUpdateApk']);

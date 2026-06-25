@@ -256,6 +256,80 @@
                             <p class="desktop-only">&copy; 2025 KAILA. All rights reserved.</p>
                         </footer>
                     </section>
+                @elseif (request()->is('login'))
+                <section class="client-login-page">
+                    <div class="login-shell">
+                        <aside class="login-brand-panel desktop-only">
+                            <div class="login-brand-inner">
+                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <p class="login-tagline">Local services. Done right.</p>
+                                <h1>Trusted local pros.<br>Reliable results.</h1>
+                                <p>KAILA connects you with verified professionals for home and business services you can trust.</p>
+                                <div class="login-benefits">
+                                    <article><span class="feature-icon shield"><i class="bi bi-shield-check"></i></span><p><b>Verified Professionals</b><br>All providers are background-checked</p></article>
+                                    <article><span class="feature-icon scales"><i class="bi bi-lock"></i></span><p><b>Secure &amp; Encrypted</b><br>Your data and payments are protected</p></article>
+                                    <article><span class="feature-icon chat"><i class="bi bi-chat-square-dots"></i></span><p><b>Real-time Communication</b><br>Chat, call, and track your job in real-time</p></article>
+                                    <article><span class="feature-icon pin"><i class="bi bi-patch-check"></i></span><p><b>Satisfaction Guaranteed</b><br>Pay only when you're 100% satisfied</p></article>
+                                </div>
+                            </div>
+                            <img class="login-road-art" src="/assets/login/login-local-road.png" alt="" aria-hidden="true">
+                        </aside>
+
+                        <main class="login-card">
+                            <div class="login-mobile-top mobile-only">
+                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <p>Local services. Done right.</p>
+                                <div class="login-mobile-benefits">
+                                    <article><i class="bi bi-shield-check"></i><span>Verified<br>Professionals</span></article>
+                                    <article><i class="bi bi-chat-dots-fill"></i><span>Secure<br>Chat &amp; Calls</span></article>
+                                    <article><i class="bi bi-lock-fill"></i><span>Safe<br>Payments</span></article>
+                                    <article><i class="bi bi-geo-alt-fill"></i><span>Local to<br>You</span></article>
+                                </div>
+                            </div>
+
+                            <form id="login-form" class="client-login-form">
+                                <div class="login-heading">
+                                    <h1>Welcome back!</h1>
+                                    <p>Log in to your KAILA account</p>
+                                </div>
+
+                                <label>Username
+                                    <span class="login-field"><i class="bi bi-person"></i><input name="username" required autocomplete="username" placeholder="Enter your username"></span>
+                                </label>
+                                <label>Password
+                                    <span class="login-field"><i class="bi bi-lock"></i><input name="password" type="password" required autocomplete="current-password" placeholder="Enter your password"><button class="password-toggle" type="button" data-password-toggle aria-label="Show password" title="Show password"><i class="bi bi-eye-slash"></i></button></span>
+                                </label>
+
+                                <div class="login-options">
+                                    <label class="login-check"><input type="checkbox" name="remember" value="1" checked><span>Remember me</span></label>
+                                    <a href="/support">Forgot password?</a>
+                                </div>
+
+                                <button class="landing-primary login-submit" type="submit">Login <i class="bi bi-arrow-right"></i></button>
+
+                                <div class="login-divider"><span>or continue with</span></div>
+                                <div class="login-socials" data-social-auth>
+                                    <button class="social-button" type="button" data-social-provider="google" data-social-mode="login"><i class="bi bi-google"></i><span class="desktop-only"></span>Google</button>
+                                    <button class="social-button" type="button" data-social-provider="facebook" data-social-mode="login"><i class="bi bi-facebook"></i><span class="desktop-only"></span>Facebook</button>
+                                </div>
+
+                                <div class="offline-note">
+                                    <span><i class="bi bi-cloud-check"></i></span>
+                                    <p><b>You're offline, but we've got you.</b><br>You can still access your recent data. Some features may be limited until you're back online.</p>
+                                    <em><i class="bi bi-wifi"></i> Offline</em>
+                                </div>
+
+                                <p class="login-safe"><i class="bi bi-lock"></i>Your data is safe and encrypted.</p>
+                                <p class="login-create">New to KAILA? <a href="/register">Create an account</a></p>
+                                <p class="form-note" data-auth-message></p>
+                            </form>
+                        </main>
+                    </div>
+                    <footer class="login-footer desktop-only">
+                        <p>By continuing, you agree to KAILA's <a href="/terms">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
+                        <p>&copy; 2025 KAILA. All rights reserved.</p>
+                    </footer>
+                </section>
                 @elseif (request()->is('register'))
                 <section class="client-register-page">
                     <header class="register-topbar">
@@ -299,28 +373,40 @@
 
                                 <section class="register-section" data-step-section="1">
                                     <h2><i class="bi bi-person"></i>Account Details</h2>
-                                    <div class="register-field"><i class="bi bi-person"></i><label>Full name<input name="name" required autocomplete="name" placeholder="e.g. Juan Dela Cruz"></label></div>
+                                    <div class="name-parts-grid">
+                                        <div class="register-field"><i class="bi bi-person"></i><label>First name<input name="first_name" required autocomplete="given-name" placeholder="e.g. Juan"></label></div>
+                                        <div class="register-field"><i class="bi bi-person"></i><label>Middle name <span>(optional)</span><input name="middle_name" autocomplete="additional-name" placeholder="e.g. Santos"></label></div>
+                                        <div class="register-field"><i class="bi bi-person"></i><label>Last name<input name="last_name" required autocomplete="family-name" placeholder="e.g. Dela Cruz"></label></div>
+                                        <div class="register-field"><i class="bi bi-person"></i><label>Suffix <span>(optional)</span><input name="suffix" autocomplete="honorific-suffix" placeholder="e.g. Jr."></label></div>
+                                    </div>
                                     <div class="register-field"><i class="bi bi-envelope"></i><label>Email address<input name="email" type="email" autocomplete="email" placeholder="e.g. juan@email.com"></label></div>
                                     <div class="register-field"><i class="bi bi-person-circle"></i><label>Username<input name="username" required minlength="3" autocomplete="username" placeholder="e.g. juandelacruz"></label></div>
-                                    <div class="register-field"><i class="bi bi-lock"></i><label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Create a strong password"></label><i class="bi bi-eye-slash"></i></div>
+                                    <div class="register-field"><i class="bi bi-lock"></i><label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Create a strong password"></label><button class="password-toggle" type="button" data-password-toggle aria-label="Show password" title="Show password"><i class="bi bi-eye-slash"></i></button></div>
                                     <p class="password-hint"><span></span>At least 8 characters with letters and numbers</p>
 
                                     <h2><i class="bi bi-telephone-fill"></i>Contact Details</h2>
-                                    <div class="register-field"><i class="bi bi-telephone"></i><label>Contact number<input name="contact_number" inputmode="tel" placeholder="09XX XXX XXXX"></label></div>
+                                    <div class="register-field"><i class="bi bi-telephone"></i><label>Contact number<input name="contact_number" inputmode="tel" required placeholder="09XX XXX XXXX"></label></div>
                                     <div class="register-field"><i class="bi bi-link-45deg"></i><label>Messenger / Social link (optional)<input name="messenger_link" placeholder="e.g. facebook.com/juandelacruz"></label></div>
-                                    <div class="register-field"><i class="bi bi-clock"></i><label>Preferred contact channel<select name="preferred_contact_channel"><option value="">Choose your preferred channel</option><option>Call</option><option>SMS</option><option>Messenger</option><option>Email</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                    <input type="hidden" name="preferred_contact_channel" value="Call" required>
                                     <div class="contact-choice-grid" aria-label="Preferred contact channel options">
-                                        <label class="choice-card is-selected"><input type="radio" name="contact_channel_card" value="Call" checked><i class="bi bi-telephone-fill"></i><span>Call</span><b><i class="bi bi-check"></i></b></label>
+                                        <label class="choice-card is-selected"><input type="radio" name="contact_channel_card" value="Call" checked><i class="bi bi-telephone-fill"></i><span>Call</span></label>
                                         <label class="choice-card"><input type="radio" name="contact_channel_card" value="SMS"><i class="bi bi-chat-square-dots"></i><span>SMS</span></label>
                                         <label class="choice-card"><input type="radio" name="contact_channel_card" value="Messenger"><i class="bi bi-messenger"></i><span>Messenger</span></label>
                                         <label class="choice-card"><input type="radio" name="contact_channel_card" value="Email"><i class="bi bi-envelope"></i><span>Email</span></label>
                                     </div>
-                                    <div class="register-field"><i class="bi bi-clock"></i><label>Best time to contact you<input name="best_contact_time" placeholder="e.g. Weekdays, 9:00 AM - 6:00 PM"></label></div>
+                                    <input type="hidden" name="best_contact_time" value="Weekdays, 9:00 AM - 6:00 PM">
+                                    <div class="time-chip-group" aria-label="Best time to contact you">
+                                        <p>Best time to contact you</p>
+                                        <label class="time-chip is-selected"><input type="radio" name="best_contact_time_choice" value="Weekdays, 9:00 AM - 6:00 PM" checked>Weekdays</label>
+                                        <label class="time-chip"><input type="radio" name="best_contact_time_choice" value="Weeknights, 6:00 PM - 9:00 PM">Evenings</label>
+                                        <label class="time-chip"><input type="radio" name="best_contact_time_choice" value="Weekends, 9:00 AM - 6:00 PM">Weekends</label>
+                                        <label class="time-chip"><input type="radio" name="best_contact_time_choice" value="Any time">Any time</label>
+                                    </div>
                                     <button class="register-next mobile-only" type="button" data-register-next>Continue <i class="bi bi-arrow-right"></i></button>
-                                    <div class="register-mobile-social mobile-only">
+                                    <div class="register-mobile-social mobile-only" data-social-auth>
                                         <span>or sign up with</span>
-                                        <button class="social-button" type="button"><i class="bi bi-google"></i>Google</button>
-                                        <button class="social-button" type="button"><i class="bi bi-facebook"></i>Facebook</button>
+                                        <button class="social-button" type="button" data-social-provider="google" data-social-mode="signup"><i class="bi bi-google"></i>Google</button>
+                                        <button class="social-button" type="button" data-social-provider="facebook" data-social-mode="signup"><i class="bi bi-facebook"></i>Facebook</button>
                                         <p>Already have an account? <a href="/login">Login</a></p>
                                     </div>
                                 </section>
@@ -336,7 +422,7 @@
                                     <h2><i class="bi bi-people-fill"></i>Role</h2>
                                     <p class="section-note">Select your role on KAILA</p>
                                     <div class="role-card-grid">
-                                        <label class="role-card is-selected"><input type="radio" name="role_preview" value="client" checked><i class="bi bi-person-fill"></i><b>Client</b><span>I need to hire a service provider</span><em><i class="bi bi-check"></i></em></label>
+                                        <label class="role-card is-selected"><input type="radio" name="role_preview" value="client" checked><i class="bi bi-person-fill"></i><b>Client</b><span>I need to hire a service provider</span></label>
                                         <label class="role-card"><input type="radio" name="role_preview" value="provider"><i class="bi bi-person-workspace"></i><b>Provider</b><span>I provide services to customers</span></label>
                                     </div>
 
@@ -349,8 +435,8 @@
                                 <div class="register-submitbar">
                                     <button class="landing-primary" type="submit">Create Account <i class="bi bi-arrow-right desktop-only"></i></button>
                                     <span>or sign up with</span>
-                                    <button class="social-button" type="button"><i class="bi bi-google"></i>Google</button>
-                                    <button class="social-button" type="button"><i class="bi bi-facebook"></i>Facebook</button>
+                                    <button class="social-button" type="button" data-social-provider="google" data-social-mode="signup"><i class="bi bi-google"></i>Google</button>
+                                    <button class="social-button" type="button" data-social-provider="facebook" data-social-mode="signup"><i class="bi bi-facebook"></i>Facebook</button>
                                 </div>
                                 <p class="register-bottom-login mobile-only">Already have an account? <a href="/login">Login</a></p>
                                 <p class="form-note" data-auth-message></p>

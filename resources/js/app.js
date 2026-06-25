@@ -21,9 +21,12 @@ const authPaths = {
     login: "/login",
     register: "/register",
 };
+const socialAuthPendingPrefix = "kaila.socialAuth.";
 const state = {
     user: cfg.user,
     data: null,
+    socialAuthConfig: null,
+    facebookSdkAppId: "",
     tab: pathTabs[window.location.pathname] || "home",
     activeRole: localStorage.getItem("kaila.activeRole") || "",
     selectedRequestId: null,
@@ -108,6 +111,207 @@ function formData(form) {
     return data;
 }
 
+function bindPasswordToggles() {
+    $$('input[type="password"]').forEach((input) => {
+        const field = input.closest(".login-field, .register-field") || input.parentElement;
+        if (!field || $("[data-password-toggle]", field)) return;
+        const button = document.createElement("button");
+        button.className = "password-toggle";
+        button.type = "button";
+        button.dataset.passwordToggle = "";
+        button.setAttribute("aria-label", "Show password");
+        button.setAttribute("title", "Show password");
+        button.innerHTML = '<i class="bi bi-eye-slash"></i>';
+        input.insertAdjacentElement("afterend", button);
+    });
+
+    document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-password-toggle]");
+        if (!button) return;
+
+        const field = button.closest(".login-field, .register-field, label, form");
+        const input = field?.querySelector('input[type="password"], input[data-password-visible="true"]');
+        if (!input) return;
+
+        const shouldShow = input.type === "password";
+        input.type = shouldShow ? "text" : "password";
+        input.dataset.passwordVisible = shouldShow ? "true" : "false";
+        button.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
+        button.setAttribute("title", shouldShow ? "Hide password" : "Show password");
+        const icon = $("i", button);
+        if (icon) {
+            icon.classList.toggle("bi-eye", shouldShow);
+            icon.classList.toggle("bi-eye-slash", !shouldShow);
+        }
+    });
+}
+
+async function loadSocialAuthConfig() {
+    try {
+        state.socialAuthConfig = await api("/api/auth/config");
+    } catch {
+        state.socialAuthConfig = {};
+    }
+    renderSocialAuthButtons();
+}
+
+function renderSocialAuthButtons() {
+    const config = state.socialAuthConfig || {};
+    $$('[data-social-provider="google"]').forEach((button) => button.hidden = !config.googleClientId);
+    $$('[data-social-provider="facebook"]').forEach((button) => button.hidden = !config.facebookAppId);
+    $$("[data-social-auth]").forEach((row) => {
+        const hasGoogle = Boolean(config.googleClientId);
+        const hasFacebook = Boolean(config.facebookAppId);
+        row.hidden = !(hasGoogle || hasFacebook);
+    });
+}
+
+async function ensureSocialAuthConfig() {
+    if (!state.socialAuthConfig) await loadSocialAuthConfig();
+    return state.socialAuthConfig || {};
+}
+
+function socialAuthMessage(message) {
+    const target = $("[data-auth-message]");
+    if (target) target.textContent = message;
+    else toast(message);
+}
+
+function loadScriptOnce(src, globalName) {
+    if (globalName && window[globalName]) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const existing = $$("script").find((script) => script.src === src);
+        if (existing) {
+            existing.addEventListener("load", resolve, { once: true });
+            existing.addEventListener("error", reject, { once: true });
+            if (globalName && window[globalName]) resolve();
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = src;
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Could not load the social sign-in script."));
+        document.head.appendChild(script);
+    });
+}
+
+function socialRedirectUri() {
+    return `${window.location.origin}${window.location.pathname}`;
+}
+
+async function handleSocialAuth(provider, mode = "login") {
+    const label = provider === "facebook" ? "Facebook" : "Google";
+    try {
+        await ensureSocialAuthConfig();
+        if (provider === "google") {
+            startGoogleRedirectAuth(mode);
+            return;
+        }
+        if (provider === "facebook") {
+            const token = await facebookAccessToken();
+            await completeSocialAuthWithToken(provider, token, mode);
+        }
+    } catch (error) {
+        socialAuthMessage(`${label} sign-in failed. ${error.message || "Please try again."}`);
+    }
+}
+
+function startGoogleRedirectAuth(mode = "login") {
+    const clientId = state.socialAuthConfig?.googleClientId;
+    if (!clientId) throw new Error("Google login is not configured.");
+
+    const marker = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem(`${socialAuthPendingPrefix}${marker}`, JSON.stringify({
+        provider: "google",
+        mode,
+        createdAt: Date.now(),
+    }));
+
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", socialRedirectUri());
+    url.searchParams.set("response_type", "token");
+    url.searchParams.set("scope", "openid email profile");
+    url.searchParams.set("prompt", "select_account");
+    url.searchParams.set("state", marker);
+    window.location.assign(url.toString());
+}
+
+async function handleGoogleRedirectResult() {
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return false;
+
+    const params = new URLSearchParams(hash);
+    const marker = params.get("state") || "";
+    const pendingKey = marker ? `${socialAuthPendingPrefix}${marker}` : "";
+    const pending = pendingKey ? JSON.parse(sessionStorage.getItem(pendingKey) || "null") : null;
+    if (pending?.provider !== "google") return false;
+
+    sessionStorage.removeItem(pendingKey);
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+
+    if (params.get("error")) {
+        socialAuthMessage(params.get("error_description") || params.get("error") || "Google sign-in was cancelled.");
+        return true;
+    }
+
+    const token = params.get("access_token");
+    if (!token) {
+        socialAuthMessage("Google did not return an access token.");
+        return true;
+    }
+
+    await completeSocialAuthWithToken("google", token, pending.mode || "login");
+    return true;
+}
+
+async function facebookAccessToken() {
+    const appId = state.socialAuthConfig?.facebookAppId;
+    if (!appId) throw new Error("Facebook login is not configured.");
+    await ensureFacebookSdk(appId);
+
+    return new Promise((resolve, reject) => {
+        window.FB.login((response) => {
+            if (response.authResponse?.accessToken) resolve(response.authResponse.accessToken);
+            else reject(new Error("Facebook sign-in was cancelled."));
+        }, { scope: "public_profile,email", auth_type: "rerequest", return_scopes: true });
+    });
+}
+
+async function ensureFacebookSdk(appId) {
+    await loadScriptOnce("https://connect.facebook.net/en_US/sdk.js", "FB");
+    if (state.facebookSdkAppId === appId) return;
+    window.FB.init({
+        appId,
+        cookie: false,
+        status: false,
+        xfbml: false,
+        version: "v20.0",
+    });
+    state.facebookSdkAppId = appId;
+}
+
+async function completeSocialAuthWithToken(provider, token, mode = "login") {
+    const body = { provider, token, mode };
+    if (mode === "signup" || mode === "register") {
+        const registerForm = $("[data-register-form]");
+        if (registerForm) Object.assign(body, formData(registerForm));
+        delete body.password;
+    }
+
+    const payload = await api("/api/auth/social", { method: "POST", body });
+    if (!payload.user?.id) throw new Error("KAILA did not return an account session.");
+    window.location.assign("/home");
+}
+
+async function initSocialAuth() {
+    if (state.user) return;
+    await loadSocialAuthConfig();
+    await handleGoogleRedirectResult();
+}
+
 function setAuthMode(mode, options = {}) {
     if (!$("#login-form") && !$("#register-form")) return;
 
@@ -125,31 +329,73 @@ function setAuthMode(mode, options = {}) {
     }
 }
 
+function setRegisterStep(step, options = {}) {
+    const registerForm = $("[data-register-form]");
+    if (!registerForm) return;
+
+    const nextStep = String(step);
+    registerForm.dataset.step = nextStep;
+    $$("[data-step-indicator]", registerForm).forEach((item) => {
+        item.classList.toggle("is-active", item.dataset.stepIndicator === nextStep);
+        item.classList.toggle("is-complete", Number(item.dataset.stepIndicator) < Number(nextStep));
+    });
+
+    if (options.updateUrl) {
+        const path = nextStep === "2" ? "/register#step2" : "/register";
+        options.replace ? history.replaceState({ registerStep: nextStep }, "", path) : history.pushState({ registerStep: nextStep }, "", path);
+    }
+
+    if (options.scrollToTop) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+}
+
 function bindAuth() {
     fillSelects();
     $$("[data-auth-mode]").forEach((button) => {
         button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
     });
+    $$("[data-social-provider]").forEach((button) => {
+        button.addEventListener("click", () => handleSocialAuth(button.dataset.socialProvider, button.dataset.socialMode || "login"));
+    });
 
     const registerForm = $("[data-register-form]");
     if (registerForm) {
-        const setRegisterStep = (step) => {
-            registerForm.dataset.step = String(step);
-            $$("[data-step-indicator]", registerForm).forEach((item) => {
-                item.classList.toggle("is-active", item.dataset.stepIndicator === String(step));
-                item.classList.toggle("is-complete", Number(item.dataset.stepIndicator) < Number(step));
-            });
+        const syncContactChannel = () => {
+            const checked = $('input[name="contact_channel_card"]:checked', registerForm);
+            const field = $('[name="preferred_contact_channel"]', registerForm);
+            if (checked && field) field.value = checked.value;
+        };
+        const syncBestContactTime = () => {
+            const checked = $('input[name="best_contact_time_choice"]:checked', registerForm);
+            const field = $('[name="best_contact_time"]', registerForm);
+            if (checked && field) field.value = checked.value;
         };
 
         if (window.location.hash === "#step2") setRegisterStep(2);
-        $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2));
+        $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2, { updateUrl: true, scrollToTop: true }));
+        $(".register-back")?.addEventListener("click", (event) => {
+            if (registerForm.dataset.step !== "2") return;
+            event.preventDefault();
+            setRegisterStep(1, { updateUrl: true, replace: true, scrollToTop: true });
+        });
+        syncContactChannel();
+        syncBestContactTime();
 
-        $$(".choice-card input, .role-card input", registerForm).forEach((input) => {
+        $$(".choice-card input, .role-card input, .time-chip input", registerForm).forEach((input) => {
             input.addEventListener("change", () => {
                 const group = input.name;
                 $$(`input[name="${group}"]`, registerForm).forEach((item) => {
-                    item.closest(".choice-card, .role-card")?.classList.toggle("is-selected", item.checked);
+                    item.closest(".choice-card, .role-card, .time-chip")?.classList.toggle("is-selected", item.checked);
                 });
+                if (group === "contact_channel_card") {
+                    const field = $('[name="preferred_contact_channel"]', registerForm);
+                    if (field) field.value = input.value;
+                }
+                if (group === "best_contact_time_choice") {
+                    const field = $('[name="best_contact_time"]', registerForm);
+                    if (field) field.value = input.value;
+                }
             });
         });
     }
@@ -609,6 +855,9 @@ window.addEventListener("popstate", () => {
     if (!state.user) {
         const mode = window.location.pathname === authPaths.register ? "register" : "login";
         setAuthMode(mode, { updateUrl: false });
+        if (mode === "register") {
+            setRegisterStep(window.location.hash === "#step2" ? 2 : 1);
+        }
         return;
     }
 
@@ -617,6 +866,8 @@ window.addEventListener("popstate", () => {
 
 bindAuth();
 bindApp();
+bindPasswordToggles();
+initSocialAuth().catch((error) => socialAuthMessage(error.message || "Social sign-in could not be initialized."));
 registerServiceWorker();
 if (state.user) {
     refresh().then(() => {

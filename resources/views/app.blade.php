@@ -7,7 +7,10 @@
     <meta name="theme-color" content="#06b6d4">
     <title>KAILA</title>
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/icon-192.png">
+    <link rel="icon" href="/assets/brand/kaila-app-icon.png">
+    @guest
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    @endguest
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
@@ -21,9 +24,10 @@
     </script>
 </head>
 <body>
-    <div id="app" class="app-shell">
+    <div id="app" class="app-shell @guest guest-shell @endguest">
+        @auth
         <aside class="rail">
-            <a class="brand" href="/">
+            <a class="brand" href="{{ auth()->check() ? '/home' : '/' }}">
                 <img src="/kaila-logo.svg" alt="KAILA">
             </a>
             <nav class="rail-nav" aria-label="Main navigation">
@@ -34,8 +38,10 @@
                 <button class="nav-btn" data-tab="settings" title="Settings">S</button>
             </nav>
         </aside>
+        @endauth
 
         <main class="main">
+            @auth
             <header class="topbar">
                 <div>
                     <p class="eyebrow">Local services marketplace</p>
@@ -49,8 +55,208 @@
                     </button>
                 </div>
             </header>
+            @endauth
 
             @guest
+                @php
+                    $legalPages = [
+                        'privacy-policy' => [
+                            'label' => 'Privacy Policy',
+                            'eyebrow' => 'Privacy',
+                            'title' => 'Privacy Policy',
+                            'lede' => 'KAILA protects the account, request, message, and service details needed to connect clients with local providers.',
+                            'items' => [
+                                ['What we collect', 'Account details, contact information, service requests, messages, ratings, location-related job details, device data, and payment-status information when needed to operate the service.'],
+                                ['How we use it', 'We use information to match requests with providers, keep conversations and job updates available, improve safety, prevent abuse, and maintain the KAILA platform.'],
+                                ['Your choices', 'You can update your profile, control what you share in requests and messages, and contact support for account or data questions.'],
+                            ],
+                        ],
+                        'terms' => [
+                            'label' => 'Terms',
+                            'eyebrow' => 'Terms',
+                            'title' => 'Terms of Service',
+                            'lede' => 'These terms outline the basic expectations for using KAILA to request, offer, manage, and complete local service work.',
+                            'items' => [
+                                ['Using KAILA', 'Clients and providers are responsible for keeping account details accurate, communicating respectfully, and using the platform for legitimate local service needs.'],
+                                ['Jobs and payments', 'Requests, offers, accepted work, completion checks, ratings, and payment arrangements must reflect the actual service agreed by both sides.'],
+                                ['Safety and conduct', 'KAILA may limit, suspend, or remove accounts, requests, messages, or content that appear unsafe, fraudulent, abusive, or outside platform rules.'],
+                            ],
+                        ],
+                        'support' => [
+                            'label' => 'Contact Support',
+                            'eyebrow' => 'Support',
+                            'title' => 'Contact Support',
+                            'lede' => 'Need help with your account, a request, a provider, or a safety concern? KAILA support can help route the issue.',
+                            'items' => [
+                                ['Account help', 'For login, registration, profile, or notification issues, include the email or phone number linked to your account.'],
+                                ['Job support', 'For active requests, include the service type, provider or client name, and a short description of what happened.'],
+                                ['Safety concerns', 'For urgent safety or fraud concerns, send the details as soon as possible and avoid sharing sensitive payment information in plain text.'],
+                            ],
+                            'action' => ['mailto:support@kaila-app.com', 'Email support@kaila-app.com'],
+                        ],
+                    ];
+                    $pageKey = trim(request()->path(), '/');
+                    $legalPage = $legalPages[$pageKey] ?? null;
+                @endphp
+
+                @if (request()->is('/'))
+                    <section class="landing-page">
+                        <header class="landing-header">
+                            <a class="landing-logo" href="/">
+                                <img src="/assets/brand/kaila-wordmark.png" alt="KAILA">
+                            </a>
+                            <nav class="landing-links" aria-label="Landing navigation">
+                                <a href="#how-it-works">How It Works</a>
+                                <a href="#for-providers">For Providers</a>
+                                <a href="#support">Support</a>
+                                <a class="landing-login" href="/login">Login</a>
+                            </nav>
+                            <button class="mobile-bell" type="button" aria-label="Notifications"><i class="bi bi-bell"></i><span></span></button>
+                        </header>
+
+                        <div class="landing-hero">
+                            <div class="landing-copy">
+                                <h1 class="desktop-title">Local services.<br><span>Done right.</span></h1>
+                                <h1 class="mobile-title">Find trusted<br><span>local service</span><br>providers.</h1>
+                                <p class="landing-lede desktop-only">Post a request, compare offers from trusted local providers, and get the job done.</p>
+                                <p class="landing-lede mobile-only">Post a request, receive offers, compare and hire with confidence.</p>
+
+                                <div class="landing-actions desktop-only">
+                                    <a class="landing-primary" href="/register">
+                                        <i class="bi bi-person-plus" aria-hidden="true"></i>
+                                        Create Account / Post a Request
+                                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                    </a>
+                                    <a class="landing-secondary" href="/login">
+                                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                                        Login
+                                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+
+                                <div class="rating-row desktop-only" aria-label="4.8 out of 5 from more than 2500 clients">
+                                    <span class="avatar-stack"><i></i><i></i><i></i><i></i></span>
+                                    <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                                    <b>4.8/5 from 2,500+ clients</b>
+                                </div>
+                            </div>
+
+                            <div class="landing-visual" aria-hidden="true">
+                                <img class="phone-mock" src="/assets/landing/phone-mock.png" alt="">
+                                <div class="provider-art">
+                                    <img class="hero-asset hero-asset-desktop" src="/assets/landing/hero-desktop.png" alt="">
+                                    <img class="hero-asset hero-asset-mobile" src="/assets/landing/hero-mobile.png" alt="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mobile-feature-list mobile-only" id="how-it-works">
+                            <div><span class="feature-icon shield"><i class="bi bi-shield-check"></i></span><p><b>Find trusted</b><br>local service providers.</p></div>
+                            <div><span class="feature-icon scales"><i class="bi bi-list-check"></i></span><p><b>Compare offers</b><br>before hiring.</p></div>
+                            <div><span class="feature-icon chat"><i class="bi bi-chat-dots-fill"></i></span><p><b>Chat, call, and</b><br>track jobs in one place.</p></div>
+                            <div><span class="feature-icon pin"><i class="bi bi-geo-alt-fill"></i></span><p><b>Built for your</b><br>local service needs.</p></div>
+                        </div>
+
+                        <section class="feature-strip desktop-only" id="how-it-works">
+                            <article><span class="feature-icon shield"><i class="bi bi-shield-check"></i></span><div><h3>Find trusted<br>local service providers.</h3><p>All providers are verified and reviewed by clients.</p></div></article>
+                            <article><span class="feature-icon tag"><i class="bi bi-tag"></i></span><div><h3>Compare offers<br>before hiring.</h3><p>Choose the best price, ratings, and availability.</p></div></article>
+                            <article><span class="feature-icon chat"><i class="bi bi-chat-dots"></i></span><div><h3>Chat, call, and<br>track jobs in one place.</h3><p>Stay updated from start to finish.</p></div></article>
+                            <article><span class="feature-icon pin"><i class="bi bi-geo-alt"></i></span><div><h3>Built for<br>local service needs.</h3><p>Fast, convenient, and made for your area.</p></div></article>
+                        </section>
+
+                        <section class="popular-services" id="for-providers">
+                            <div class="services-head">
+                                <h2>Popular Services</h2>
+                                <a class="mobile-only" href="/register">View all</a>
+                            </div>
+                            <div class="service-grid">
+                                <a href="/register"><span class="service-icon plumbing"><i class="bi bi-droplet"></i></span><b>Plumbing</b></a>
+                                <a href="/register"><span class="service-icon repair"><i class="bi bi-tools"></i></span><b>Repair</b></a>
+                                <a href="/register"><span class="service-icon cleaning"><i class="bi bi-bucket"></i></span><b>Cleaning</b></a>
+                                <a href="/register"><span class="service-icon electrical"><i class="bi bi-lightning-charge-fill"></i></span><b>Electrical</b></a>
+                                <a href="/register"><span class="service-icon errands"><i class="bi bi-bag"></i></span><b>Errands</b></a>
+                                <a href="/register"><span class="service-icon home-help"><i class="bi bi-house-door"></i></span><b>Home Help</b></a>
+                            </div>
+                            <a class="view-services desktop-only" href="/register">View all services <span>-&gt;</span></a>
+                        </section>
+
+                        <section class="mobile-safety mobile-only">
+                            <span class="feature-icon shield"><i class="bi bi-shield-check"></i></span>
+                            <p>Verified professionals.<br>Secure payments.</p>
+                            <span class="payment-icons"><i class="bi bi-lock-fill"></i><i class="bi bi-credit-card-2-front-fill"></i></span>
+                        </section>
+
+                        <div class="landing-actions mobile-actions mobile-only">
+                            <a class="landing-primary" href="/register"><i class="bi bi-plus-circle"></i>Create Account / Post a Request</a>
+                            <a class="landing-secondary" href="/login"><i class="bi bi-box-arrow-in-right"></i>Login</a>
+                        </div>
+
+                        <footer class="landing-footer" id="support">
+                            <div class="footer-safety desktop-only">
+                                <i class="footer-shield bi bi-shield-check" aria-hidden="true"></i>
+                                <p><b>Your safety is our priority.</b><br>Secure payments. Protected data.</p>
+                            </div>
+                            <nav>
+                                <a href="/privacy-policy">Privacy Policy</a>
+                                <a href="/terms">Terms<span class="desktop-only"> of Service</span></a>
+                                <a href="/support">Contact Support</a>
+                            </nav>
+                            <p class="desktop-only">&copy; 2025 KAILA. All rights reserved.</p>
+                        </footer>
+                    </section>
+                @elseif ($legalPage)
+                    <section class="landing-page legal-page">
+                        <header class="landing-header legal-header">
+                            <a class="landing-logo" href="/">
+                                <img src="/assets/brand/kaila-wordmark.png" alt="KAILA">
+                            </a>
+                            <nav class="landing-links" aria-label="Page navigation">
+                                <a href="/">Home</a>
+                                <a href="/privacy-policy">Privacy Policy</a>
+                                <a href="/terms">Terms</a>
+                                <a href="/support">Support</a>
+                                <a class="landing-login" href="/login">Login</a>
+                            </nav>
+                        </header>
+
+                        <main class="legal-content">
+                            <a class="legal-back" href="/"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to KAILA</a>
+                            <p class="legal-eyebrow">{{ $legalPage['eyebrow'] }}</p>
+                            <h1>{{ $legalPage['title'] }}</h1>
+                            <p class="legal-lede">{{ $legalPage['lede'] }}</p>
+
+                            <div class="legal-grid">
+                                @foreach ($legalPage['items'] as [$heading, $body])
+                                    <article>
+                                        <h2>{{ $heading }}</h2>
+                                        <p>{{ $body }}</p>
+                                    </article>
+                                @endforeach
+                            </div>
+
+                            @isset($legalPage['action'])
+                                <a class="landing-primary legal-action" href="{{ $legalPage['action'][0] }}">
+                                    <i class="bi bi-headset" aria-hidden="true"></i>
+                                    {{ $legalPage['action'][1] }}
+                                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            @endisset
+                        </main>
+
+                        <footer class="landing-footer legal-footer">
+                            <div class="footer-safety desktop-only">
+                                <i class="footer-shield bi bi-shield-check" aria-hidden="true"></i>
+                                <p><b>Your safety is our priority.</b><br>Secure payments. Protected data.</p>
+                            </div>
+                            <nav>
+                                <a href="/privacy-policy">Privacy Policy</a>
+                                <a href="/terms">Terms<span class="desktop-only"> of Service</span></a>
+                                <a href="/support">Contact Support</a>
+                            </nav>
+                            <p class="desktop-only">&copy; 2025 KAILA. All rights reserved.</p>
+                        </footer>
+                    </section>
+                @else
                 <section class="auth-grid">
                     <div class="auth-intro">
                         <img src="/kaila-logo.svg" alt="KAILA">
@@ -81,6 +287,7 @@
                         <p class="form-note" data-auth-message></p>
                     </div>
                 </section>
+                @endif
             @else
                 <section class="content-grid">
                     <div class="panel focus-panel" data-panel="home">

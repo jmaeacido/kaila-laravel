@@ -66,4 +66,17 @@ class AuthController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'username' => ['nullable', 'string', 'max:190'],
+            'email' => ['nullable', 'email', 'max:190'],
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Password reset is handled by KAILA support for this migrated MVP.',
+        ]);
+    }
 }

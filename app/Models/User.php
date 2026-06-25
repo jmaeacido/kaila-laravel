@@ -17,6 +17,10 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'suffix',
         'username',
         'email',
         'password',
@@ -24,8 +28,12 @@ class User extends Authenticatable
         'area',
         'category',
         'contact_number',
+        'messenger_link',
         'preferred_contact_channel',
         'best_contact_time',
+        'auth_provider',
+        'auth_subject',
+        'social_photo_url',
         'data_privacy_consent',
         'account_status',
     ];

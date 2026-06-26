@@ -235,9 +235,9 @@ const screens = {
     support() {
         const messages = store.directMessages;
         return card(`
-            <div class="mock-chat-panel__messages mb-3">${messages.map((message) => `<div class="mock-chat-bubble ${message.sender_id === store.user?.id ? "out" : "in"}">${escapeHtml(message.body)}${renderAttachments(message.attachments)}</div>`).join("") || `<p class="mock-empty">Message provider support.</p>`}</div>
+            <div class="mock-chat-panel__messages mb-3">${messages.map((message) => `<div class="mock-chat-bubble ${message.sender_id === store.user?.id ? "out" : "in"}">${escapeHtml(message.body)}${renderAttachments(message.attachments)}</div>`).join("") || `<p class="mock-empty">Message KAILA Customer Service for help.</p>`}</div>
             <form data-provider-support class="mock-chat-compose">
-                <input class="form-control" name="body" required placeholder="Message provider support">
+                <input class="form-control" name="body" required placeholder="Message KAILA Customer Service">
                 <button class="mock-send-btn" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
             </form>`);
     },

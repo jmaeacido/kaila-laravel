@@ -10,6 +10,13 @@ export const store = {
     notifications: [],
     unreadNotifications: 0,
     supportDesk: null,
+    supportPeerId: null,
+    support: {
+        queue: [],
+        threads: [],
+        activities: [],
+        permissions: {},
+    },
     metrics: {},
     categories: cfg.categories || [],
     urgencies: cfg.urgencies || [],
@@ -22,6 +29,13 @@ export const store = {
     assistantSuggestions: [],
     analyticsInsight: null,
     incomingCall: null,
+    admin: {
+        users: [],
+        reports: [],
+        validationEntries: [],
+        auditLogs: [],
+        permissions: {},
+    },
     listeners: new Set(),
 };
 
@@ -72,6 +86,8 @@ export async function refreshState() {
         store.notifications = payload.notifications || [];
         store.unreadNotifications = payload.unreadNotifications || 0;
         store.supportDesk = payload.supportDesk || null;
+        store.support = payload.support || { queue: [], threads: [], activities: [], permissions: {} };
+        store.admin = payload.admin || { users: [], reports: [], validationEntries: [], auditLogs: [], permissions: {} };
         store.metrics = payload.metrics || {};
         store.categories = payload.categories || store.categories;
         store.urgencies = payload.urgencies || store.urgencies;
@@ -278,6 +294,17 @@ export async function feedComment(postId, body) {
     return api(`/api/feed/${postId}/comments`, { method: "POST", body: { body } });
 }
 
+export async function updateFeedPost(postId, body) {
+    const payload = await api(`/api/feed/${postId}`, { method: "PUT", body });
+    await loadFeed();
+    return payload.post;
+}
+
+export async function deleteFeedPost(postId) {
+    await api(`/api/feed/${postId}`, { method: "DELETE" });
+    await loadFeed();
+}
+
 export async function assistantChat(messages) {
     return api("/api/assistant/chat", { method: "POST", body: { messages } });
 }
@@ -293,11 +320,142 @@ export async function validationDecisionSignal(body) {
 }
 
 export async function saveValidationEntry(body) {
-    return api("/api/validation", { method: "POST", body });
+    const payload = await api("/api/validation", { method: "POST", body });
+    await refreshState();
+    return payload.entry;
+}
+
+export async function updateValidationEntry(entryId, body) {
+    const payload = await api(`/api/validation/${entryId}`, { method: "PUT", body });
+    await refreshState();
+    return payload.entry;
+}
+
+export async function deleteValidationEntry(entryId) {
+    await api(`/api/validation/${entryId}`, { method: "DELETE" });
+    await refreshState();
 }
 
 export function isStaffUser() {
     return ["admin", "ops", "customer_service"].includes(store.user?.role);
+}
+
+export function isAdminUser() {
+    return store.user?.role === "admin";
+}
+
+export function isSuperAdminUser() {
+    return Boolean(store.admin?.permissions?.isSuperAdmin) || (store.user?.role === "admin" && String(store.user?.username || "").toLowerCase() === "jmaeacido");
+}
+
+export function isCustomerServiceUser() {
+    return store.user?.role === "customer_service";
+}
+
+export function isOpsUser() {
+    return store.user?.role === "ops";
+}
+
+export function supportMetrics() {
+    return store.metrics?.support || {};
+}
+
+export function supportQueue() {
+    return store.support?.queue || [];
+}
+
+export function supportThreads() {
+    return store.support?.threads || [];
+}
+
+export function supportActivities() {
+    return store.support?.activities || [];
+}
+
+export function canResolveDisputes() {
+    return Boolean(store.support?.permissions?.canResolveDisputes);
+}
+
+export function canTriageReports() {
+    return Boolean(store.support?.permissions?.canTriageReports || store.admin?.permissions?.isAdmin || isCustomerServiceUser());
+}
+
+export function canWriteSupportNotes() {
+    return Boolean(store.support?.permissions?.canWriteSupportNotes || store.admin?.permissions?.isAdmin || isCustomerServiceUser());
+}
+
+export function selectSupportPeer(userId) {
+    store.supportPeerId = userId ? Number(userId) : null;
+    store.directMessages = [];
+    emitChange();
+}
+
+export function supportPeer() {
+    const id = store.supportPeerId;
+    if (!id) return null;
+    return supportDirectoryUsers().find((user) => user.id === id)
+        || supportThreads().find((thread) => thread.peer?.id === id)?.peer
+        || null;
+}
+
+export function supportDirectoryUsers() {
+    return (store.admin?.users || []).filter((user) => ["client", "provider"].includes(user.role));
+}
+
+export async function supportReportAction(reportId, status, resolution_note = "") {
+    return adminReportAction(reportId, status, resolution_note);
+}
+
+export async function supportDisputeAction(requestId, action, extra = {}) {
+    return jobAction(requestId, action, extra);
+}
+
+export async function postSupportNote(detail) {
+    const payload = await api("/api/activity", { method: "POST", body: { detail } });
+    await refreshState();
+    return payload.activity;
+}
+
+export async function loadSupportJobMessages(requestId) {
+    selectRequest(requestId);
+    return loadJobMessages(requestId);
+}
+
+export function canManageAccount(user) {
+    if (!isAdminUser() || !user) return false;
+    if (String(user.username || "").toLowerCase() === "jmaeacido") return isSuperAdminUser() && user.id === store.user?.id;
+    if (user.role === "admin") return isSuperAdminUser();
+    return true;
+}
+
+export async function adminCreateUser(body) {
+    const payload = await api("/api/admin/users", { method: "POST", body });
+    await refreshState();
+    return payload.user;
+}
+
+export async function adminUpdateUser(userId, body) {
+    const payload = await api(`/api/admin/users/${userId}`, { method: "PUT", body });
+    await refreshState();
+    return payload.user;
+}
+
+export async function adminUserStatus(userId, status, reason = "") {
+    const payload = await api(`/api/admin/users/${userId}/status`, { method: "POST", body: { status, reason } });
+    await refreshState();
+    return payload.user;
+}
+
+export async function adminProviderProfile(userId, body) {
+    const payload = await api(`/api/admin/users/${userId}/provider-profile`, { method: "POST", body: { ...body, rules_agreement: true } });
+    await refreshState();
+    return payload.provider;
+}
+
+export async function adminReportAction(reportId, status, resolution_note = "") {
+    const payload = await api(`/api/reports/${reportId}/action`, { method: "POST", body: { status, resolution_note } });
+    await refreshState();
+    return payload.report;
 }
 
 export async function saveProfile(body) {

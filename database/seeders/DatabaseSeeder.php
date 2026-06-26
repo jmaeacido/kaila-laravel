@@ -67,6 +67,17 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('Password123!'),
             'role' => 'customer_service',
             'area' => 'Admin / Ops',
+            'account_status' => 'active',
+        ]);
+
+        User::factory()->create([
+            'name' => 'KAILA Support Two',
+            'username' => 'support2',
+            'email' => 'support2@example.test',
+            'password' => Hash::make('Password123!'),
+            'role' => 'customer_service',
+            'area' => 'Admin / Ops',
+            'account_status' => 'active',
         ]);
 
         User::factory()->create([
@@ -76,6 +87,24 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('Password123!'),
             'role' => 'admin',
             'area' => 'Admin / Ops',
+        ]);
+
+        User::factory()->create([
+            'name' => 'KAILA Super Admin',
+            'username' => User::SUPER_ADMIN_USERNAME,
+            'email' => 'jmaeacido@example.test',
+            'password' => Hash::make('Password123!'),
+            'role' => 'admin',
+            'area' => 'Admin / Ops',
+        ]);
+
+        User::factory()->create([
+            'name' => 'KAILA Ops',
+            'username' => 'ops',
+            'email' => 'ops@example.test',
+            'password' => Hash::make('Password123!'),
+            'role' => 'ops',
+            'area' => 'Validation',
         ]);
 
         $request = ServiceRequest::create([
@@ -135,6 +164,35 @@ class DatabaseSeeder extends Seeder
             'author_id' => $provider->id,
             'body' => 'Available for electrical checks around Gingoog City today until 7 PM.',
             'visibility' => 'public',
+        ]);
+
+        $disputed = ServiceRequest::create([
+            'client_id' => $client->id,
+            'accepted_provider_id' => $provider->id,
+            'category' => 'Plumbing',
+            'urgency' => 'Today',
+            'area' => 'Barangay 22, Gingoog City',
+            'budget' => 'PHP 600',
+            'preferred_schedule' => 'Afternoon',
+            'contact_method' => 'KAILA chat',
+            'details' => 'Leaking pipe under the sink needs urgent repair.',
+            'status' => 'Disputed',
+            'dispute_note' => 'Client says work was incomplete; provider says additional parts were needed.',
+            'permission_to_forward' => true,
+            'consent_to_rate' => true,
+            'confirmed_at' => now()->subDays(2),
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('moderation_reports')->insert([
+            'reporter_id' => $client->id,
+            'reported_user_id' => $provider->id,
+            'service_request_id' => $disputed->id,
+            'type' => 'job',
+            'reason' => 'Incomplete work',
+            'details' => 'Support queue demo report tied to disputed plumbing job.',
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

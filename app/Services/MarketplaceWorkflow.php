@@ -54,6 +54,17 @@ class MarketplaceWorkflow
 
     public function perform(ServiceRequest $request, User $actor, string $action, array $payload = []): void
     {
+        $supportActions = [
+            'support_resume_job',
+            'support_request_revision',
+            'support_release_payment',
+            'support_cancel_request',
+            'resolve_dispute',
+        ];
+
+        abort_if($actor->isAdmin() && !in_array($action, ['rate'], true), 403, 'Admins cannot perform job actions.');
+        abort_if(in_array($action, $supportActions, true) && !$actor->canResolveDisputes(), 403);
+
         match ($action) {
             'start' => $this->start($request, $actor),
             'provider_complete' => $this->providerComplete($request, $actor, $payload['proof_note'] ?? null),
@@ -62,6 +73,10 @@ class MarketplaceWorkflow
             'cancel' => $this->cancel($request, $actor),
             'dispute' => $this->dispute($request, $actor, $payload['dispute_note'] ?? null),
             'resolve_dispute' => $this->resolveDispute($request, $actor),
+            'support_resume_job' => $this->supportResumeJob($request, $actor, $payload['note'] ?? null),
+            'support_request_revision' => $this->supportRequestRevision($request, $actor, $payload['revision_note'] ?? null),
+            'support_release_payment' => $this->supportReleasePayment($request, $actor, $payload['note'] ?? null),
+            'support_cancel_request' => $this->supportCancelRequest($request, $actor, $payload['note'] ?? null),
             'rate' => $this->rate($request, $actor, $payload),
             default => abort(422, 'Unsupported job action.'),
         };
@@ -93,7 +108,7 @@ class MarketplaceWorkflow
 
     private function clientComplete(ServiceRequest $request, User $actor): void
     {
-        abort_unless($request->client_id === $actor->id || $actor->isStaff(), 403);
+        abort_unless($request->client_id === $actor->id || $actor->isCustomerService(), 403);
         abort_unless($request->status === 'Provider Marked Done', 422);
 
         $this->releasePayment($request);
@@ -101,7 +116,7 @@ class MarketplaceWorkflow
 
     private function revision(ServiceRequest $request, User $actor, ?string $note): void
     {
-        abort_unless($request->client_id === $actor->id || $actor->isStaff(), 403);
+        abort_unless($request->client_id === $actor->id || $actor->isCustomerService(), 403);
         abort_unless($request->status === 'Provider Marked Done', 422);
 
         $request->forceFill([
@@ -113,7 +128,7 @@ class MarketplaceWorkflow
 
     private function cancel(ServiceRequest $request, User $actor): void
     {
-        abort_unless($request->client_id === $actor->id || $actor->isStaff(), 403);
+        abort_unless($request->client_id === $actor->id || $actor->isCustomerService(), 403);
         abort_unless(in_array($request->status, ['Posted', 'Offers Received', 'Countered', 'Accepted'], true), 422);
 
         $request->forceFill(['status' => 'Cancelled'])->save();
@@ -133,10 +148,53 @@ class MarketplaceWorkflow
 
     private function resolveDispute(ServiceRequest $request, User $actor): void
     {
-        abort_unless($actor->isStaff(), 403);
+        abort_unless($actor->canResolveDisputes(), 403);
         abort_unless($request->status === 'Disputed', 422);
 
         $request->forceFill(['status' => 'Resolved'])->save();
+    }
+
+    private function supportResumeJob(ServiceRequest $request, User $actor, ?string $note): void
+    {
+        abort_unless($request->status === 'Disputed', 422);
+
+        $request->forceFill([
+            'status' => 'In Progress',
+            'dispute_note' => trim(($request->dispute_note ? $request->dispute_note."\n" : '').'Support: '.($note ?: 'Job resumed by support.')),
+        ])->save();
+    }
+
+    private function supportRequestRevision(ServiceRequest $request, User $actor, ?string $note): void
+    {
+        abort_unless($request->status === 'Disputed', 422);
+
+        $request->forceFill([
+            'status' => 'Revision Requested',
+            'revision_note' => $note ?: 'Revision requested by support.',
+            'dispute_note' => trim(($request->dispute_note ? $request->dispute_note."\n" : '').'Support requested revision.'),
+        ])->save();
+    }
+
+    private function supportReleasePayment(ServiceRequest $request, User $actor, ?string $note): void
+    {
+        abort_unless(in_array($request->status, ['Disputed', 'Provider Marked Done'], true), 422);
+
+        $this->releasePayment($request);
+        if ($note) {
+            $request->forceFill([
+                'dispute_note' => trim(($request->dispute_note ? $request->dispute_note."\n" : '').'Support: '.$note),
+            ])->save();
+        }
+    }
+
+    private function supportCancelRequest(ServiceRequest $request, User $actor, ?string $note): void
+    {
+        abort_unless(in_array($request->status, ['Disputed', 'Accepted', 'In Progress', 'Revision Requested', 'Provider Marked Done'], true), 422);
+
+        $request->forceFill([
+            'status' => 'Cancelled',
+            'dispute_note' => trim(($request->dispute_note ? $request->dispute_note."\n" : '').'Support: '.($note ?: 'Cancelled by support.')),
+        ])->save();
     }
 
     private function rate(ServiceRequest $request, User $actor, array $payload): void

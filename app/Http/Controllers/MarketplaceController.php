@@ -100,6 +100,7 @@ class MarketplaceController extends Controller
 
         $requests = ServiceRequest::query()
             ->with(['client:id,name,username,area', 'acceptedProvider:id,name,username', 'offers.provider:id,name,username,area', 'messages.sender:id,name,username'])
+            ->when($user->isCustomerService(), fn ($query) => $query->whereIn('id', $this->stateBuilder->supportVisibleRequestIds() ?: [0]))
             ->when(!$user->isStaff(), function ($query) use ($user) {
                 $providerCategory = $user->providerProfile?->category;
                 $query->where(function ($scope) use ($user, $providerCategory) {
@@ -133,8 +134,21 @@ class MarketplaceController extends Controller
         $metrics = match (true) {
             $user->role === 'provider' => ['provider' => $this->stateBuilder->providerMetrics($user)],
             $user->role === 'client' => ['client' => $this->stateBuilder->clientMetrics($user)],
+            $user->isCustomerService() => ['support' => $this->stateBuilder->supportMetrics($user)],
+            $user->isStaff() => ['staff' => $this->stateBuilder->staffMetrics($user)],
             default => [],
         };
+
+        $supportPayload = ($user->isCustomerService() || $user->isAdmin()) ? [
+            'queue' => $this->stateBuilder->supportQueue(),
+            'threads' => $user->isCustomerService() ? $this->stateBuilder->directConversationThreads($user) : [],
+            'activities' => $user->isCustomerService() ? $this->stateBuilder->supportActivities($user) : [],
+            'permissions' => [
+                'canTriageReports' => $user->canTriageReports(),
+                'canResolveDisputes' => $user->canResolveDisputes(),
+                'canWriteSupportNotes' => $user->canWriteSupportNotes(),
+            ],
+        ] : null;
 
         return response()->json([
             'user' => $user->load('providerProfile'),
@@ -146,6 +160,19 @@ class MarketplaceController extends Controller
             'notifications' => $user->notifications()->latest()->limit(30)->get(),
             'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
             'supportDesk' => $this->stateBuilder->supportDesk(),
+            'support' => $supportPayload,
+            'admin' => $user->isStaff() ? [
+                'users' => $this->stateBuilder->staffUsers($user),
+                'reports' => $this->stateBuilder->moderationReports($user),
+                'validationEntries' => $this->stateBuilder->validationEntries($user),
+                'auditLogs' => $this->stateBuilder->auditLogs($user),
+                'permissions' => [
+                    'isAdmin' => $user->isAdmin(),
+                    'isSuperAdmin' => $user->isSuperAdmin(),
+                    'isCustomerService' => $user->isCustomerService(),
+                    'isOps' => $user->isOps(),
+                ],
+            ] : null,
             'metrics' => $metrics,
             'pushStatus' => [
                 'configured' => (bool) (config('kaila.web_push.public_key') && config('kaila.web_push.private_key')),
@@ -554,7 +581,7 @@ class MarketplaceController extends Controller
     public function directMessages(Request $request, User $user)
     {
         $viewer = $request->user();
-        abort_unless($viewer->isStaff() || $user->isStaff(), 403);
+        abort_unless($viewer->canInitiateDirectContact($user) || $viewer->id === $user->id, 403);
         abort_if($this->isBlockedBetween($viewer->id, $user->id), 403, 'Messages are blocked between these accounts.');
 
         $messages = DB::table('direct_messages')
@@ -587,7 +614,7 @@ class MarketplaceController extends Controller
     public function sendDirectMessage(Request $request, User $user)
     {
         $viewer = $request->user();
-        abort_unless($viewer->isStaff() || $user->isStaff(), 403);
+        abort_unless($viewer->canInitiateDirectContact($user), 403);
         abort_if($this->isBlockedBetween($viewer->id, $user->id), 403, 'Messages are blocked between these accounts.');
 
         $data = $request->validate([
@@ -627,7 +654,7 @@ class MarketplaceController extends Controller
 
     public function directPresence(Request $request, User $user)
     {
-        abort_unless($request->user()->isStaff() || $user->isStaff(), 403);
+        abort_unless($request->user()->canInitiateDirectContact($user), 403);
 
         return response()->json(['ok' => true]);
     }
@@ -749,19 +776,22 @@ class MarketplaceController extends Controller
 
     public function reportAction(Request $request, int $report)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        $this->authorizeSupport($request->user());
         $data = $request->validate([
-            'status' => ['required', 'string', 'max:40'],
+            'status' => ['required', Rule::in(['Open', 'In Review', 'Closed'])],
             'resolution_note' => ['nullable', 'string', 'max:1200'],
         ]);
 
         DB::table('moderation_reports')->where('id', $report)->update([
             'status' => $data['status'],
-            'details' => DB::raw('COALESCE(details, "")'),
             'updated_at' => now(),
         ]);
+        $this->recordAuditLog($request->user(), 'report.'.$data['status'], [
+            'report_id' => $report,
+            'resolution_note' => $data['resolution_note'] ?? null,
+        ]);
 
-        return response()->json(['ok' => true]);
+        return response()->json(['ok' => true, 'report' => DB::table('moderation_reports')->find($report)]);
     }
 
     public function blockUser(Request $request, User $user)
@@ -1090,6 +1120,8 @@ class MarketplaceController extends Controller
 
     public function activity(Request $request)
     {
+        abort_unless($request->user()->canWriteSupportNotes(), 403);
+
         $data = $request->validate(['detail' => ['required', 'string', 'max:1200']]);
         $id = DB::table('activities')->insertGetId([
             'title' => 'KAILA activity',
@@ -1104,6 +1136,7 @@ class MarketplaceController extends Controller
 
     public function validationDecisionSignal(Request $request)
     {
+        $this->authorizeValidation($request->user());
         $data = $request->validate([
             'type' => ['required', Rule::in(['client_survey', 'provider_interview'])],
             'responses' => ['required', 'array'],
@@ -1119,7 +1152,7 @@ class MarketplaceController extends Controller
 
     public function analyticsInsights(Request $request)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless($request->user()->isAdmin(), 403);
 
         $metrics = [
             'requests' => ServiceRequest::query()->count(),
@@ -1168,7 +1201,7 @@ class MarketplaceController extends Controller
 
     public function validationStore(Request $request)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        $this->authorizeValidation($request->user());
         $data = $request->validate([
             'type' => ['required', Rule::in(['client_survey', 'provider_interview'])],
             'responses' => ['required', 'array'],
@@ -1185,13 +1218,18 @@ class MarketplaceController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        $this->recordAuditLog($request->user(), 'validation.create', [
+            'entry_id' => $id,
+            'type' => $data['type'],
+            'decision_signal' => $data['decision_signal'] ?? 'Neutral',
+        ]);
 
         return response()->json(['entry' => DB::table('validation_entries')->find($id)], 201);
     }
 
     public function validationUpdate(Request $request, int $entry)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        $this->authorizeValidation($request->user());
         $data = $request->validate([
             'responses' => ['nullable', 'array'],
             'decision_signal' => ['nullable', 'string', 'max:40'],
@@ -1202,30 +1240,34 @@ class MarketplaceController extends Controller
             ...collect($data)->map(fn ($value, $key) => $key === 'responses' ? json_encode($value) : $value)->all(),
             'updated_at' => now(),
         ]);
+        $this->recordAuditLog($request->user(), 'validation.update', ['entry_id' => $entry]);
 
         return response()->json(['entry' => DB::table('validation_entries')->find($entry)]);
     }
 
     public function validationDelete(Request $request, int $entry)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        $this->authorizeValidation($request->user());
         DB::table('validation_entries')->where('id', $entry)->delete();
+        $this->recordAuditLog($request->user(), 'validation.delete', ['entry_id' => $entry]);
 
         return response()->json(['ok' => true]);
     }
 
     public function adminCreateUser(Request $request)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless($request->user()->isAdmin(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'username' => ['required', 'alpha_dash', 'min:3', 'max:80', Rule::unique('users', 'username')],
             'email' => ['nullable', 'email', 'max:190', Rule::unique('users', 'email')],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', Rule::in(['client', 'provider', 'customer_service', 'admin'])],
+            'role' => ['required', Rule::in(['client', 'provider', 'customer_service', 'ops', 'admin'])],
             'area' => ['nullable', 'string', 'max:190'],
             'category' => ['nullable', 'string', 'max:160'],
         ]);
+        abort_unless($request->user()->canCreateRole($data['role']), 403);
+        abort_unless(strtolower($data['username']) !== User::SUPER_ADMIN_USERNAME || ($request->user()->isSuperAdmin() && $data['role'] === 'admin'), 403);
 
         $user = User::create([
             ...$data,
@@ -1234,46 +1276,67 @@ class MarketplaceController extends Controller
             'account_status' => 'active',
             'data_privacy_consent' => true,
         ]);
+        $this->recordAuditLog($request->user(), 'account.create', [
+            'target_user_id' => $user->id,
+            'target_role' => $user->role,
+        ]);
 
         return response()->json(['user' => $user], 201);
     }
 
     public function adminUpdateUser(Request $request, User $user)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless($request->user()->canManageAdminAccount($user), 403);
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:160'],
             'email' => ['nullable', 'email', 'max:190', Rule::unique('users', 'email')->ignore($user)],
-            'role' => ['nullable', Rule::in(['client', 'provider', 'customer_service', 'admin'])],
+            'role' => ['nullable', Rule::in(['client', 'provider', 'customer_service', 'ops', 'admin'])],
             'area' => ['nullable', 'string', 'max:190'],
             'category' => ['nullable', 'string', 'max:160'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
+        if (isset($data['role'])) {
+            abort_unless($request->user()->canCreateRole($data['role']) || $data['role'] === $user->role, 403);
+        }
+        if ($user->isSuperAdmin()) {
+            unset($data['role'], $data['account_status']);
+        }
 
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         }
 
         $user->update($data);
+        $this->recordAuditLog($request->user(), 'account.edit', [
+            'target_user_id' => $user->id,
+            'fields' => array_keys($data),
+        ]);
 
         return response()->json(['user' => $user->fresh('providerProfile')]);
     }
 
     public function adminProviderProfile(Request $request, User $user)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless($request->user()->isAdmin(), 403);
+        abort_if($user->isStaff(), 422, 'Staff accounts cannot be converted to provider profiles.');
         $request->setUserResolver(fn () => $user);
+        $response = $this->saveProvider($request);
+        $this->recordAuditLog($request->user(), 'provider_profile.create', ['target_user_id' => $user->id]);
 
-        return $this->saveProvider($request);
+        return $response;
     }
 
     public function adminUserStatus(Request $request, User $user)
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless($request->user()->canManageAdminAccount($user), 403);
         $data = $request->validate([
             'status' => ['required', Rule::in(['active', 'suspended', 'banned', 'deleted'])],
             'reason' => ['nullable', 'string', 'max:1200'],
         ]);
+        if ($data['status'] === 'deleted') {
+            abort_unless($request->user()->canDeleteAdminAccount($user) || !$user->isStaff(), 403);
+        }
+        abort_if($user->isSuperAdmin() && $data['status'] !== 'active', 403, 'The super admin account cannot be disabled.');
 
         $user->forceFill([
             'account_status' => $data['status'],
@@ -1286,6 +1349,10 @@ class MarketplaceController extends Controller
             DB::table('push_tokens')->where('user_id', $user->id)->delete();
             PushSubscription::query()->where('user_id', $user->id)->delete();
         }
+        $this->recordAuditLog($request->user(), 'account.'.$data['status'], [
+            'target_user_id' => $user->id,
+            'reason' => $data['reason'] ?? null,
+        ]);
 
         return response()->json(['user' => $user]);
     }
@@ -1328,13 +1395,34 @@ class MarketplaceController extends Controller
 
     private function canReadConversation(ServiceRequest $request, User $user): bool
     {
-        return $request->isParticipant($user) || $request->offers()->where('provider_id', $user->id)->exists();
+        return $user->canReadJobConversation($request);
+    }
+
+    private function authorizeSupport(User $user): void
+    {
+        abort_unless($user->canTriageReports(), 403);
+    }
+
+    private function authorizeValidation(User $user): void
+    {
+        abort_unless($user->isAdmin() || $user->isOps(), 403);
+    }
+
+    private function recordAuditLog(User $actor, string $action, array $metadata = []): void
+    {
+        DB::table('audit_logs')->insert([
+            'actor_id' => $actor->id,
+            'actor_role' => $actor->role,
+            'action' => $action,
+            'metadata' => json_encode($metadata),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function canWriteConversation(ServiceRequest $request, User $user): bool
     {
-        return $request->isParticipant($user)
-            && in_array($request->status, ['Accepted', 'In Progress', 'Provider Marked Done', 'Revision Requested', 'Disputed'], true);
+        return $user->canWriteJobConversation($request);
     }
 
     private function isBlockedBetween(int $firstUserId, int $secondUserId): bool

@@ -621,9 +621,10 @@ const screens = {
         return card(`
             <form data-client-dispute>
                 <h2 class="h4">Report / Dispute Job</h2>
+                <p class="text-muted">Active jobs are marked disputed for support review. A moderation report is also filed.</p>
                 <div class="mb-3"><label class="form-label">Reason</label><input class="form-control" name="reason" required></div>
                 <div class="mb-3"><label class="form-label">Details</label><textarea class="form-control" name="details"></textarea></div>
-                <button class="btn btn-danger w-100" type="submit">Send report</button>
+                <button class="btn btn-danger w-100" type="submit">Send to support</button>
             </form>`);
     },
     block() {
@@ -942,9 +943,13 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
         const job = currentJob();
         if (!job) return;
         const data = Object.fromEntries(new FormData(event.target));
+        const note = [data.reason, data.details].filter(Boolean).join(": ");
         try {
+            if (["Accepted", "In Progress", "Provider Marked Done", "Payment Released"].includes(job.status)) {
+                await jobAction(job.id, "dispute", { dispute_note: note || "Dispute opened by client." });
+            }
             await reportJob(job.id, data.reason, data.details);
-            showToast("Report sent to support.");
+            showToast("Dispute and report sent to support.");
         } catch (error) {
             showToast(error.message);
         }

@@ -93,6 +93,49 @@ export function errorScreen(message) {
     return `<div class="kaila-empty">${icon("fa-triangle-exclamation")} ${escapeHtml(message)}</div>`;
 }
 
+export function formatRoleLabel(roleValue = "") {
+    if (store.admin?.permissions?.isSuperAdmin && roleValue === "admin") {
+        return "Super Admin";
+    }
+
+    const labels = {
+        customer_service: "Customer Service",
+        admin: "Admin",
+        ops: "Ops",
+        client: "Client",
+        provider: "Provider",
+    };
+
+    return labels[roleValue] || String(roleValue || "User")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function topbarDisplayName() {
+    return store.user?.name || "KAILA User";
+}
+
+function topbarMenuItems(screens = {}) {
+    const screenKeys = new Set(Object.keys(screens));
+    const items = [];
+
+    if (screenKeys.has("settings")) {
+        items.push({ view: "settings", icon: "fa-user-gear", label: "Profile & Settings" });
+    }
+
+    const activityView = ["notifications", "activity"].find((view) => screenKeys.has(view));
+    if (activityView) {
+        items.push({ view: activityView, icon: "fa-bell", label: "Activity" });
+    }
+
+    const supportView = ["support", "inbox"].find((view) => screenKeys.has(view));
+    if (supportView && ["client", "provider", "admin", "customer_service"].includes(store.user?.role)) {
+        items.push({ view: supportView, icon: "fa-headset", label: supportView === "inbox" ? "Support Desk" : "Support" });
+    }
+
+    return items;
+}
+
 export function createApp(options) {
     const {
         rootId = "marketplace-app",
@@ -179,10 +222,12 @@ export function createApp(options) {
 
         document.body.classList.add("kaila-auth");
         const logo = "/assets/brand/kaila-logo.png";
-        const userName = store.user?.name || "KAILA User";
-        const displayUserName = role === "client" ? "Alex D." : userName;
+        const displayUserName = topbarDisplayName();
         const userRole = store.user?.role || role;
+        const displayRoleLabel = formatRoleLabel(userRole);
         const unread = store.unreadNotifications || 0;
+        const userPhoto = store.user?.social_photo_url || "";
+        const menuItems = topbarMenuItems(screens);
         const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post"]);
         const primaryNav = navItems.filter(([id]) => !id.startsWith("_") && !hiddenNav.has(id));
         const inboxUnread = store.unreadMessages || store.unreadNotifications || 0;
@@ -227,18 +272,18 @@ export function createApp(options) {
                             </button>
                             <div class="dropdown">
                                 <button class="kaila-user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    ${avatar(displayUserName, "", role === "client" ? "" : store.user?.social_photo_url || "")}
-                                    <div>
+                                    ${avatar(displayUserName, "", userPhoto)}
+                                    <div class="kaila-user-chip__meta">
                                         <strong>${escapeHtml(displayUserName)}</strong>
-                                        <small>${escapeHtml(userRole)}</small>
+                                        <small>${escapeHtml(displayRoleLabel)}</small>
                                     </div>
-                                    ${icon("fa-chevron-down")}
+                                    ${icon("fa-chevron-down", "kaila-user-chip__chevron")}
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end shadow-sm">
-                                    <button class="dropdown-item" type="button" data-view-link="settings"><i class="fa-solid fa-user-gear me-2"></i>Profile & Settings</button>
-                                    <button class="dropdown-item" type="button" data-view-link="notifications"><i class="fa-solid fa-bell me-2"></i>Activity</button>
-                                    <button class="dropdown-item" type="button" data-view-link="support"><i class="fa-solid fa-headset me-2"></i>Support</button>
-                                    <div class="dropdown-divider"></div>
+                                    ${menuItems.map((item) => `
+                                        <button class="dropdown-item" type="button" data-view-link="${item.view}"><i class="fa-solid ${item.icon} me-2"></i>${escapeHtml(item.label)}</button>
+                                    `).join("")}
+                                    ${menuItems.length ? `<div class="dropdown-divider"></div>` : ""}
                                     <button class="dropdown-item text-danger" type="button" data-logout><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</button>
                                 </div>
                             </div>

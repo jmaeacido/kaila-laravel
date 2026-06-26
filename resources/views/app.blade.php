@@ -7,17 +7,21 @@
     <meta name="theme-color" content="#06b6d4">
     <title>KAILA</title>
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/assets/brand/kaila-app-icon.png">
+    <link rel="icon" href="/assets/brand/kaila-app-icon-512.png">
+    <link rel="apple-touch-icon" href="/assets/brand/kaila-app-icon-512.png">
     @guest
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endif
     @else
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-            @vite(['resources/js/client-ui.js'])
+            @if (auth()->user()->role === 'provider')
+                @vite(['resources/css/kaila-ui.css', 'resources/js/provider-ui.js'])
+            @else
+                @vite(['resources/css/kaila-ui.css', 'resources/js/client-ui.js'])
+            @endif
         @endif
     @endguest
     <script>
@@ -97,7 +101,7 @@
                     <section class="landing-page">
                         <header class="landing-header">
                             <a class="landing-logo" href="/">
-                                <img src="/assets/brand/kaila-wordmark.png" alt="KAILA">
+                                <img src="/assets/brand/kaila-logo.png" alt="KAILA">
                             </a>
                             <nav class="landing-links" aria-label="Landing navigation">
                                 <a href="#how-it-works">How It Works</a>
@@ -202,7 +206,7 @@
                     <section class="landing-page legal-page">
                         <header class="landing-header legal-header">
                             <a class="landing-logo" href="/">
-                                <img src="/assets/brand/kaila-wordmark.png" alt="KAILA">
+                                <img src="/assets/brand/kaila-logo.png" alt="KAILA">
                             </a>
                             <nav class="landing-links" aria-label="Page navigation">
                                 <a href="/">Home</a>
@@ -268,7 +272,7 @@
                     <div class="login-shell">
                         <aside class="login-brand-panel desktop-only">
                             <div class="login-brand-inner">
-                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-logo.png" alt="KAILA"></a>
                                 <p class="login-tagline">Local services. Done right.</p>
                                 <h1>Trusted local pros.<br>Reliable results.</h1>
                                 <p>KAILA connects you with verified professionals for home and business services you can trust.</p>
@@ -284,7 +288,7 @@
 
                         <main class="login-card">
                             <div class="login-mobile-top mobile-only">
-                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <a class="landing-logo" href="/"><img src="/assets/brand/kaila-logo.png" alt="KAILA"></a>
                                 <p>Local services. Done right.</p>
                                 <div class="login-mobile-benefits">
                                     <article><i class="bi bi-shield-check"></i><span>Verified<br>Professionals</span></article>
@@ -341,7 +345,7 @@
                 <section class="client-register-page {{ request('role') === 'provider' ? 'is-provider-register' : '' }}">
                     <header class="register-topbar">
                         <a class="register-back mobile-only" href="/" aria-label="Back" data-history-back><i class="bi bi-chevron-left"></i></a>
-                        <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                        <a class="landing-logo" href="/"><img src="/assets/brand/kaila-logo.png" alt="KAILA"></a>
                         <div class="register-login desktop-only">
                             <span>Already have an account?</span>
                             <a class="landing-login" href="/login">Login</a>
@@ -363,7 +367,7 @@
 
                         <main class="register-panel">
                             <div class="register-heading">
-                                <a class="landing-logo mobile-only" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
+                                <a class="landing-logo mobile-only" href="/"><img src="/assets/brand/kaila-logo.png" alt="KAILA"></a>
                                 <h1 data-register-title>Create Account (Client)</h1>
                                 <p data-register-subtitle>Join KAILA and get things done.</p>
                             </div>
@@ -872,8 +876,5 @@
         @endauth
     </div>
     <div class="toast-host" data-toasts></div>
-    @auth
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @endauth
 </body>
 </html>

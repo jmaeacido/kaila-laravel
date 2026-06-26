@@ -1,1 +1,1 @@
-<div id="client-app" class="min-vh-100 bg-light"></div>
+<div id="marketplace-app" class="min-vh-100"></div>

@@ -6,7 +6,13 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/client-ui.js'],
+            input: [
+                'resources/css/app.css',
+                'resources/css/kaila-ui.css',
+                'resources/js/app.js',
+                'resources/js/client-ui.js',
+                'resources/js/provider-ui.js',
+            ],
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {

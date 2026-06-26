@@ -11,6 +11,7 @@ Route::get('/privacy-policy', [MarketplaceController::class, 'app'])->name('priv
 Route::get('/terms', [MarketplaceController::class, 'app'])->name('terms');
 Route::get('/support', [MarketplaceController::class, 'app'])->name('support');
 Route::get('/home', [MarketplaceController::class, 'app'])->name('app.home');
+Route::get('/requests', [MarketplaceController::class, 'app'])->name('app.requests');
 Route::get('/jobs', [MarketplaceController::class, 'app'])->name('app.jobs');
 Route::get('/post', [MarketplaceController::class, 'app'])->name('app.post');
 Route::get('/messages', [MarketplaceController::class, 'app'])->name('app.messages');

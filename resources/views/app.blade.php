@@ -10,10 +10,16 @@
     <link rel="icon" href="/assets/brand/kaila-app-icon.png">
     @guest
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @endif
+    @else
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+            @vite(['resources/js/client-ui.js'])
+        @endif
     @endguest
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endif
     <script>
         window.KAILA = {
             user: @json(auth()->user()),
@@ -26,38 +32,7 @@
 </head>
 <body>
     <div id="app" class="app-shell @guest guest-shell @endguest">
-        @auth
-        <aside class="rail">
-            <a class="brand" href="{{ auth()->check() ? '/home' : '/' }}">
-                <img src="/kaila-logo.svg" alt="KAILA">
-            </a>
-            <nav class="rail-nav" aria-label="Main navigation">
-                <button class="nav-btn active" data-tab="home" title="Home">H</button>
-                <button class="nav-btn" data-tab="jobs" title="Jobs">J</button>
-                <button class="nav-btn" data-tab="post" title="Post">+</button>
-                <button class="nav-btn" data-tab="messages" title="Messages">M</button>
-                <button class="nav-btn" data-tab="settings" title="Settings">S</button>
-            </nav>
-        </aside>
-        @endauth
-
         <main class="main">
-            @auth
-            <header class="topbar">
-                <div>
-                    <p class="eyebrow">Local services marketplace</p>
-                    <h1 id="screen-title">KAILA</h1>
-                </div>
-                <div class="top-actions">
-                    <button class="role-switch" data-role-toggle hidden></button>
-                    <button class="bell" data-tab-jump="notifications" title="Notifications">
-                        <span>N</span>
-                        <b data-badge hidden>0</b>
-                    </button>
-                </div>
-            </header>
-            @endauth
-
             @guest
                 @php
                     $legalPages = [
@@ -759,6 +734,8 @@
                 </section>
                 @endif
             @else
+                @include('client')
+                @if(false)
                 <section class="content-grid">
                     <div class="panel focus-panel" data-panel="home">
                         <div class="home-hero">
@@ -878,10 +855,12 @@
                         </div>
                     </div>
                 </section>
+                @endif
             @endguest
         </main>
 
         @auth
+            @if(false)
             <nav class="bottom-nav" aria-label="Mobile navigation">
                 <button class="active" data-tab="home">Home</button>
                 <button data-tab="jobs">Jobs</button>
@@ -889,8 +868,12 @@
                 <button data-tab="messages">Chat</button>
                 <button data-tab="settings">Me</button>
             </nav>
+            @endif
         @endauth
     </div>
     <div class="toast-host" data-toasts></div>
+    @auth
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @endauth
 </body>
 </html>

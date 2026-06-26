@@ -3,6 +3,7 @@ import {
     loadDirectMessages,
     loadFeed,
     loadJobMessages,
+    loadProviderProfile,
     matchingRequests,
     passRequest,
     providerActiveJobs,
@@ -56,6 +57,15 @@ import {
     sectionHead,
 } from "./kaila-ui-core.js";
 import { renderRouteMap } from "./kaila-maps.js";
+import {
+    bindProviderProfileActions,
+    ensureOwnerProfileDetail,
+    providerProfileEditScreen,
+    providerProfileOwnerScreen,
+    providerProfilePreviewScreen,
+    providerPublicProfileScreen,
+} from "./kaila-provider-profile.js";
+import { bindProviderSettingsActions, providerSettingsScreen } from "./kaila-provider-settings.js";
 
 const providerName = () => store.user?.name || "Provider";
 const area = () => store.user?.area || store.user?.provider_profile?.area || "Your area";
@@ -70,6 +80,7 @@ const navItems = [
     ["jobs", "Active Jobs", "fa-briefcase", "/jobs"],
     ["feed", "Feed", "fa-users", "/feed"],
     ["inbox", "Inbox", "fa-comment-dots", "/messages"],
+    ["profile", "My Profile", "fa-id-card", "/profile"],
     ["notifications", "Activity", "fa-bell", "/notifications"],
     ["settings", "Settings", "fa-gear", "/settings"],
     ["offers", "Offers Sent", "fa-paper-plane", "/jobs#offers"],
@@ -78,6 +89,8 @@ const navItems = [
     ["job-detail", "Accepted Job", "fa-clipboard-check", "/jobs#detail"],
     ["chat", "Job Chat", "fa-comments", "/messages#chat"],
     ["call", "Call", "fa-video", "/messages#call"],
+    ["profile-preview", "Profile Preview", "fa-eye", "/profile#profile-preview"],
+    ["profile-edit", "Edit Profile", "fa-pen", "/profile#profile-edit"],
     ["travel", "Travel", "fa-location-dot", "/jobs#travel"],
     ["mark-done", "Mark Done", "fa-circle-check", "/jobs#mark-done"],
     ["support", "Support", "fa-headset", "/support"],
@@ -91,6 +104,7 @@ const routeViews = {
     "/jobs": "jobs",
     "/feed": "feed",
     "/messages": "inbox",
+    "/profile": "profile",
     "/assistant": "assistant",
     "/notifications": "notifications",
     "/settings": "settings",
@@ -105,6 +119,9 @@ const subtitles = {
     settings: "Profile, availability, and account preferences.",
     support: "Help from the KAILA provider team.",
     notifications: "Recent job and offer activity.",
+    profile: "Manage your public profile and service information.",
+    "profile-preview": "Preview how clients see your profile.",
+    "profile-edit": "Update your profile details.",
 };
 
 function currentJob() {
@@ -264,32 +281,17 @@ const screens = {
     notifications() {
         return activityScreen({ title: "Activity", subtitle: subtitles.notifications });
     },
+    profile() {
+        return providerProfileOwnerScreen();
+    },
+    "profile-preview"() {
+        return providerProfilePreviewScreen();
+    },
+    "profile-edit"() {
+        return providerProfileEditScreen(categories());
+    },
     settings() {
-        const profile = store.user?.provider_profile || {};
-        return `
-            ${mockPageHero("Provider Settings", subtitles.settings)}
-            <div class="row g-4">
-                <div class="col-lg-8">${card(`
-                    <form data-provider-profile>
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Display name</label><input class="form-control" name="display_name" value="${escapeHtml(profile.display_name || providerName())}"></div>
-                            <div class="col-md-6"><label class="form-label">Category</label><select class="form-select" name="category">${categories().map((item) => `<option ${item === (profile.category || specialties()) ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select></div>
-                            <div class="col-md-6"><label class="form-label">Service area</label><input class="form-control" name="area" value="${escapeHtml(profile.area || area())}"></div>
-                            <div class="col-md-6"><label class="form-label">Availability</label><input class="form-control" name="availability" value="${escapeHtml(profile.availability || "Available")}"></div>
-                            <div class="col-12"><label class="form-label">Services offered</label><textarea class="form-control" name="specific_services">${escapeHtml(profile.specific_services || "")}</textarea></div>
-                        </div>
-                        <input type="hidden" name="rules_agreement" value="1">
-                        <button class="btn btn-primary mt-3" type="submit">Save profile</button>
-                    </form>
-                `)}</div>
-                <div class="col-lg-4">${card(`
-                    <div class="mock-trust-card mb-3">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <div><strong>Profile Status: Active</strong><p>You are receiving matching requests.</p></div>
-                    </div>
-                    <button class="btn btn-danger w-100" data-logout><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-                `)}</div>
-            </div>`;
+        return providerSettingsScreen();
     },
     feed: feedScreen,
     assistant: assistantScreen,
@@ -336,6 +338,17 @@ function bindProviderScreenActions({ navigate, toast: showToast }) {
     bindSupportHubActions({ navigate, toast: showToast });
     bindNotificationActions({ navigate, toast: showToast, selectRequestAction: selectRequest });
     bindCallActions({ navigate, toast: showToast });
+    bindProviderProfileActions({
+        toast: showToast,
+        navigate,
+        categories: categories(),
+        loadProfileForUser: loadProviderProfile,
+    });
+    bindProviderSettingsActions({ toast: showToast });
+
+    if (document.querySelector(".pp-page") && store.user?.id) {
+        ensureOwnerProfileDetail(store.user.id).catch(() => {});
+    }
 
     document.querySelectorAll("[data-pass-request]").forEach((button) => {
         button.addEventListener("click", async () => {
@@ -383,16 +396,6 @@ function bindProviderScreenActions({ navigate, toast: showToast }) {
             await jobAction(job.id, "provider_complete", Object.fromEntries(new FormData(event.target)));
             showToast("Completion submitted.");
             navigate("jobs");
-        } catch (error) {
-            showToast(error.message);
-        }
-    });
-
-    document.querySelector("[data-provider-profile]")?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        try {
-            await saveProvider(Object.fromEntries(new FormData(event.target)));
-            showToast("Profile saved.");
         } catch (error) {
             showToast(error.message);
         }

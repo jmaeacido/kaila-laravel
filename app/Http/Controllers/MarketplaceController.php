@@ -181,6 +181,11 @@ class MarketplaceController extends Controller
                 'configured' => (bool) (config('kaila.web_push.public_key') && config('kaila.web_push.private_key')),
                 'subscriptions' => PushSubscription::query()->where('user_id', $user->id)->count(),
             ],
+            'preferences' => array_merge([
+                'theme' => 'system',
+                'push_notifications' => true,
+                'email_notifications' => true,
+            ], $user->preferences ?? []),
         ]);
     }
 
@@ -199,6 +204,29 @@ class MarketplaceController extends Controller
         $request->user()->update(collect($data)->except('activeRole')->all());
 
         return response()->json(['user' => $request->user()->fresh('providerProfile')]);
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $data = $request->validate([
+            'theme' => ['nullable', Rule::in(['system', 'light', 'dark'])],
+            'push_notifications' => ['nullable', 'boolean'],
+            'email_notifications' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $preferences = array_merge($user->preferences ?? [
+            'theme' => 'system',
+            'push_notifications' => true,
+            'email_notifications' => true,
+        ], array_filter($data, fn ($value) => $value !== null));
+
+        $user->forceFill(['preferences' => $preferences])->save();
+
+        return response()->json([
+            'user' => $user->fresh('providerProfile'),
+            'preferences' => $preferences,
+        ]);
     }
 
     public function deleteAccount(Request $request)
@@ -231,17 +259,28 @@ class MarketplaceController extends Controller
 
         $data = $request->validate([
             'display_name' => ['nullable', 'string', 'max:160'],
+            'tagline' => ['nullable', 'string', 'max:160'],
             'provider_type' => ['nullable', 'string', 'max:80'],
             'category' => ['required', Rule::in(config('kaila.categories'))],
             'specific_services' => ['nullable', 'string', 'max:1000'],
+            'about' => ['nullable', 'string', 'max:2000'],
             'area' => ['required', 'string', 'max:190'],
             'coverage_area' => ['nullable', 'string', 'max:1000'],
-            'availability' => ['required', 'string', 'max:80'],
-            'emergency_availability' => ['nullable', 'string', 'max:80'],
+            'availability' => ['required', 'string', 'max:120'],
+            'emergency_availability' => ['nullable', 'string', 'max:120'],
+            'response_time' => ['nullable', 'string', 'max:80'],
             'years_experience' => ['nullable', 'string', 'max:80'],
             'skills' => ['nullable', 'string', 'max:1000'],
             'minimum_fee' => ['nullable', 'string', 'max:80'],
             'price_range' => ['nullable', 'string', 'max:1000'],
+            'travel_limit' => ['nullable', 'string', 'max:80'],
+            'work_samples' => ['nullable', 'array', 'max:12'],
+            'work_samples.*.title' => ['nullable', 'string', 'max:160'],
+            'work_samples.*.url' => ['nullable', 'string', 'max:500'],
+            'certificates' => ['nullable', 'array', 'max:12'],
+            'certificates.*.title' => ['nullable', 'string', 'max:160'],
+            'certificates.*.subtitle' => ['nullable', 'string', 'max:160'],
+            'certificates.*.verified' => ['nullable', 'boolean'],
             'rules_agreement' => ['accepted'],
         ]);
 
@@ -257,6 +296,13 @@ class MarketplaceController extends Controller
         ])->save();
 
         return response()->json(['provider' => $profile->fresh('user')]);
+    }
+
+    public function showProvider(Request $request, User $user)
+    {
+        abort_unless($user->role === 'provider' && $user->providerProfile, 404);
+
+        return response()->json($this->stateBuilder->providerPublicProfile($user));
     }
 
     public function createRequest(Request $request)

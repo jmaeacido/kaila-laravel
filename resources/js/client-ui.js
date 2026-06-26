@@ -12,6 +12,7 @@ import {
     loadDirectMessages,
     loadFeed,
     loadJobMessages,
+    loadProviderProfile,
     providerForRequest,
     refreshState,
     reportJob,
@@ -43,6 +44,10 @@ import {
     validationScreen,
 } from "./kaila-shared-screens.js";
 import { bindCallActions } from "./kaila-webrtc.js";
+import {
+    bindProviderProfileActions,
+    providerPublicProfileScreen,
+} from "./kaila-provider-profile.js";
 import {
     initLocationPicker,
     renderRouteMap,
@@ -100,6 +105,7 @@ const navItems = [
     ["detail", "Job Detail", "fa-briefcase", "/jobs#detail"],
     ["chat", "Job Chat", "fa-comments", "/messages#chat"],
     ["call", "Call", "fa-video", "/messages#call"],
+    ["provider-detail", "Provider Profile", "fa-id-card", "/providers#detail"],
     ["tracking", "Tracking", "fa-location-dot", "/jobs#tracking"],
     ["completion", "Completion", "fa-circle-check", "/jobs#completion"],
     ["rating", "Rating", "fa-star", "/jobs#rating"],
@@ -418,15 +424,25 @@ const screens = {
         const items = store.providers || [];
         return `
             ${mockPageHero("Providers", "Browse verified providers in your area.")}
-            ${items.length ? `<div class="mock-provider-grid">${items.map((provider) => `
-                <div class="mock-provider-card">
-                    ${avatar(provider.name)}
+            ${items.length ? `<div class="mock-provider-grid">${items.map((provider) => {
+                const userId = provider.user_id || provider.user?.id;
+                return `
+                <button class="mock-provider-card" type="button" data-provider-profile-view="${userId || ""}">
+                    ${avatar(provider.display_name || provider.user?.name || "Provider", "", provider.user?.social_photo_url || "")}
                     <div>
-                        <strong>${escapeHtml(provider.name)}</strong>
-                        <small>${escapeHtml(provider.provider_profile?.category || provider.category || "Services")} · ${escapeHtml(provider.area || area())}</small>
+                        <strong>${escapeHtml(provider.display_name || provider.user?.name || "Provider")}</strong>
+                        <small>${escapeHtml(provider.category || provider.user?.category || "Services")} · ${escapeHtml(provider.area || provider.user?.area || area())}</small>
                     </div>
-                </div>`).join("")}</div>` : card(`<p class="mock-empty">No providers listed yet.</p>`)}
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>`;
+            }).join("")}</div>` : card(`<p class="mock-empty">No providers listed yet.</p>`)}
         `;
+    },
+    "provider-detail"() {
+        return providerPublicProfileScreen(store.providerProfileDetail, {
+            showBack: true,
+            showActions: true,
+        });
     },
     bookings() {
         return `
@@ -789,6 +805,11 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
     bindSupportHubActions({ navigate, toast: showToast });
     bindNotificationActions({ navigate, toast: showToast, selectRequestAction: selectRequest });
     bindCallActions({ navigate, toast: showToast });
+    bindProviderProfileActions({
+        toast: showToast,
+        navigate,
+        loadProfileForUser: loadProviderProfile,
+    });
     if (isStaffUser()) bindStaffActions({ toast: showToast });
 
     const locationMap = document.querySelector("[data-location-map]");

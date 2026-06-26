@@ -10,17 +10,23 @@ class ProviderProfile extends Model
     protected $fillable = [
         'user_id',
         'display_name',
+        'tagline',
         'provider_type',
         'category',
         'specific_services',
+        'about',
         'area',
         'coverage_area',
         'availability',
         'emergency_availability',
+        'response_time',
         'years_experience',
         'skills',
         'minimum_fee',
         'price_range',
+        'travel_limit',
+        'work_samples',
+        'certificates',
         'rules_agreement',
         'trust_level',
         'status',
@@ -28,7 +34,11 @@ class ProviderProfile extends Model
 
     protected function casts(): array
     {
-        return ['rules_agreement' => 'boolean'];
+        return [
+            'rules_agreement' => 'boolean',
+            'work_samples' => 'array',
+            'certificates' => 'array',
+        ];
     }
 
     public function user(): BelongsTo

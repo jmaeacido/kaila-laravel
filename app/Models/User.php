@@ -38,6 +38,7 @@ class User extends Authenticatable
         'social_photo_url',
         'data_privacy_consent',
         'account_status',
+        'preferences',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -219,6 +220,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'preferences' => 'array',
             'data_privacy_consent' => 'boolean',
             'status_updated_at' => 'datetime',
             'banned_at' => 'datetime',

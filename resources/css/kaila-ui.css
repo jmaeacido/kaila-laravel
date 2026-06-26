@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import "./kaila-provider-pages.css";
 
 :root {
     --kaila-blue: #0056d2;
@@ -600,11 +601,18 @@ button { cursor: pointer; border: 0; background: transparent; }
     display: flex;
     gap: 12px;
     align-items: center;
+    width: 100%;
+    text-align: left;
     padding: 16px;
     border: 1px solid var(--kaila-line);
     border-radius: 16px;
     background: #fff;
     box-shadow: var(--kaila-shadow);
+}
+
+.mock-provider-card .fa-chevron-right {
+    margin-left: auto;
+    color: var(--kaila-muted);
 }
 
 .mock-provider-card small { display: block; color: var(--kaila-muted); margin-top: 4px; }
@@ -5040,5 +5048,15 @@ video.kaila-media-item {
 
     .help-hub__desk-card {
         width: 100%;
+    }
+
+    .provider-profile-stats,
+    .provider-profile-pricing,
+    .provider-profile-public-stats,
+    .provider-profile-grid,
+    .provider-profile-bottom,
+    .provider-profile-public-layout,
+    .provider-profile-edit__grid {
+        grid-template-columns: 1fr;
     }
 }

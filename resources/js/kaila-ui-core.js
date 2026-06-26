@@ -337,7 +337,7 @@ export function createApp(options) {
         const unreadBadge = formatCountBadge(unread);
         const userPhoto = store.user?.social_photo_url || "";
         const menuItems = topbarMenuItems(screens);
-        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post", "support-detail"]);
+        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile-preview", "profile-edit", "provider-detail", "in-progress", "post", "support-detail"]);
         const primaryNav = navItems.filter(([id]) => !id.startsWith("_") && !hiddenNav.has(id));
         const navBadge = (viewId, explicitBadge) => explicitBadge || navBadgeFor(viewId);
 

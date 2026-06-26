@@ -35,6 +35,8 @@ export const store = {
     analyticsInsight: null,
     incomingCall: null,
     callSession: null,
+    selectedProviderId: null,
+    providerProfileDetail: null,
     admin: {
         users: [],
         reports: [],
@@ -94,6 +96,11 @@ export async function refreshState() {
         store.unreadMessages = payload.unreadMessages || 0;
         store.badgeCounts = payload.badgeCounts || {};
         store.supportDesk = payload.supportDesk || null;
+        store.preferences = payload.preferences || store.preferences || {
+            theme: "system",
+            push_notifications: true,
+            email_notifications: true,
+        };
         store.support = payload.support || { queue: [], threads: [], activities: [], permissions: {} };
         store.admin = payload.admin || { users: [], reports: [], validationEntries: [], auditLogs: [], permissions: {} };
         store.metrics = payload.metrics || {};
@@ -106,6 +113,7 @@ export async function refreshState() {
         store.error = error.message;
     } finally {
         store.loading = false;
+        applyTheme(store.preferences?.theme || "system");
         emitChange();
     }
 }
@@ -559,6 +567,28 @@ export async function saveProfile(body) {
     return payload.user;
 }
 
+export async function saveSettings(body) {
+    const payload = await api("/api/settings", { method: "POST", body });
+    store.user = payload.user;
+    store.preferences = payload.preferences || store.preferences;
+    emitChange();
+    return payload.preferences;
+}
+
+export function applyTheme(theme = store.preferences?.theme || "system") {
+    const root = document.documentElement;
+    root.dataset.kailaTheme = theme;
+    if (theme === "dark") {
+        root.classList.add("kaila-theme-dark");
+        root.classList.remove("kaila-theme-light");
+    } else if (theme === "light") {
+        root.classList.add("kaila-theme-light");
+        root.classList.remove("kaila-theme-dark");
+    } else {
+        root.classList.remove("kaila-theme-light", "kaila-theme-dark");
+    }
+}
+
 export async function saveProvider(body) {
     const payload = await api("/api/providers", {
         method: "POST",
@@ -566,6 +596,20 @@ export async function saveProvider(body) {
     });
     await refreshState();
     return payload.provider;
+}
+
+export function selectProvider(id) {
+    store.selectedProviderId = id ? Number(id) : null;
+    store.providerProfileDetail = null;
+    emitChange();
+}
+
+export async function loadProviderProfile(userId) {
+    const payload = await api(`/api/providers/${userId}`);
+    store.providerProfileDetail = payload;
+    store.selectedProviderId = Number(userId);
+    emitChange();
+    return payload;
 }
 
 export async function reportJob(requestId, reason, details) {

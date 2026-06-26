@@ -15,6 +15,7 @@ Route::get('/home', [MarketplaceController::class, 'app'])->name('app.home');
 Route::get('/requests', [MarketplaceController::class, 'app'])->name('app.requests');
 Route::get('/jobs', [MarketplaceController::class, 'app'])->name('app.jobs');
 Route::get('/accounts', [MarketplaceController::class, 'app'])->name('app.accounts');
+Route::get('/profile', [MarketplaceController::class, 'app'])->name('app.profile');
 Route::get('/providers', [MarketplaceController::class, 'app'])->name('app.providers');
 Route::get('/clients', [MarketplaceController::class, 'app'])->name('app.clients');
 Route::get('/reports', [MarketplaceController::class, 'app'])->name('app.reports');
@@ -56,7 +57,9 @@ Route::get('/api/public-post/{feedPost}', [MarketplaceController::class, 'public
 Route::middleware('auth')->group(function () {
     Route::get('/api/state', [MarketplaceController::class, 'state'])->name('api.state');
     Route::post('/api/profile', [MarketplaceController::class, 'profile']);
+    Route::post('/api/settings', [MarketplaceController::class, 'updateSettings']);
     Route::delete('/api/account', [MarketplaceController::class, 'deleteAccount']);
+    Route::get('/api/providers/{user}', [MarketplaceController::class, 'showProvider']);
     Route::post('/api/providers', [MarketplaceController::class, 'saveProvider']);
     Route::post('/api/requests', [MarketplaceController::class, 'createRequest']);
     Route::put('/api/requests/{serviceRequest}', [MarketplaceController::class, 'updateRequest']);

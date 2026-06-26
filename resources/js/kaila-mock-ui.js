@@ -469,16 +469,18 @@ Please bring tools and replacement parts if needed.</textarea>
                     <h2><span>4</span> Where is the service needed?</h2>
                     <label class="post-field">
                         <span>Service area</span>
-                        <input name="area" value="Makati City, Metro Manila" required>
+                        <input name="area" value="Makati City, Metro Manila" required data-location-area>
                         <i class="fa-solid fa-location-dot"></i>
                     </label>
-                    <button class="post-location-row" type="button" data-toast="Location picker is coming soon.">
-                        <span><small>Exact job location</small><strong>123 Arnaiz Ave., San Lorenzo, Makati City</strong></span>
+                    <input type="hidden" name="job_lat" value="14.5547000" data-job-lat>
+                    <input type="hidden" name="job_lng" value="121.0244000" data-job-lng>
+                    <button class="post-location-row" type="button" data-focus-location>
+                        <span><small>Exact job location</small><input name="exact_location_notes" value="123 Arnaiz Ave., San Lorenzo, Makati City" data-location-search></span>
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
-                    <div class="post-map-preview">
-                        <i class="fa-solid fa-location-dot"></i>
-                        <button type="button" data-toast="Map adjustment is coming soon.">Adjust on map <i class="fa-solid fa-crosshairs"></i></button>
+                    <div class="post-map-preview post-map-preview--interactive" data-location-map>
+                        <div class="kaila-map-fallback"><i class="fa-solid fa-location-dot"></i><span>Loading map...</span></div>
+                        <button type="button" data-use-current-location>Use current location <i class="fa-solid fa-crosshairs"></i></button>
                     </div>
                 </section>
 

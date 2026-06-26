@@ -1639,7 +1639,8 @@ button { cursor: pointer; border: 0; background: transparent; }
 }
 
 .post-location-row small,
-.post-location-row strong {
+.post-location-row strong,
+.post-location-row input {
     display: block;
 }
 
@@ -1648,8 +1649,18 @@ button { cursor: pointer; border: 0; background: transparent; }
     font-size: 0.72rem;
 }
 
+.post-location-row input {
+    width: min(520px, 100%);
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--kaila-ink);
+    font-weight: 800;
+    padding: 0;
+}
+
 .post-map-preview {
-    min-height: 56px;
+    min-height: 180px;
     border-radius: 10px;
     background:
         linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)),
@@ -1659,6 +1670,23 @@ button { cursor: pointer; border: 0; background: transparent; }
     justify-content: center;
     position: relative;
     overflow: hidden;
+}
+
+.post-map-preview--interactive {
+    display: block;
+}
+
+.post-map-preview--interactive > div:not(.kaila-map-fallback) {
+    min-height: 180px;
+}
+
+.post-map-preview--interactive .leaflet-container {
+    min-height: 180px;
+    border-radius: inherit;
+}
+
+.kaila-leaflet-canvas {
+    min-height: inherit;
 }
 
 .post-map-preview > i {
@@ -1681,6 +1709,77 @@ button { cursor: pointer; border: 0; background: transparent; }
     color: var(--kaila-blue);
     font-weight: 800;
     box-shadow: var(--kaila-shadow);
+    z-index: 2;
+}
+
+.kaila-map-fallback {
+    min-height: inherit;
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    padding: 18px;
+    text-align: center;
+    color: var(--kaila-blue);
+    background: #eef6ff;
+}
+
+.kaila-map-fallback i {
+    font-size: 1.5rem;
+}
+
+.kaila-route-map {
+    min-height: 360px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #e6eef8;
+    background: #eef6ff;
+}
+
+.kaila-route-map .leaflet-container {
+    min-height: 360px;
+}
+
+.kaila-leaflet-pin {
+    display: grid;
+    place-items: center;
+}
+
+.kaila-leaflet-pin span {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 3px solid #fff;
+    border-radius: 50% 50% 50% 8px;
+    color: #fff;
+    background: var(--kaila-blue);
+    box-shadow: 0 12px 24px rgba(18, 38, 63, 0.22);
+    transform: rotate(-45deg);
+}
+
+.kaila-leaflet-pin i {
+    transform: rotate(45deg);
+}
+
+.kaila-leaflet-pin--provider span {
+    background: #12b981;
+}
+
+.leaflet-control-attribution {
+    font-size: 10px;
+}
+
+.kaila-route-panel {
+    display: grid;
+    gap: 14px;
+}
+
+.kaila-route-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .post-media-row {

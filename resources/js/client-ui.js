@@ -48,6 +48,10 @@ import {
     validationScreen,
 } from "./kaila-shared-screens.js";
 import {
+    initLocationPicker,
+    renderRouteMap,
+} from "./kaila-maps.js";
+import {
     clientQuickActions,
     clientHomeFallbackRequests,
     clientStatRow,
@@ -588,10 +592,15 @@ const screens = {
         const job = currentJob();
         const nav = job?.navigation_state;
         return card(`
-            <div class="text-center py-5">
-                <i class="fa-solid fa-map-location-dot fa-3x text-primary mb-3"></i>
-                <h3>Live provider route</h3>
-                <p class="text-muted">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km away` : "Waiting for provider travel update"} · ETA ${nav?.eta_minutes || "—"} min</p>
+            <div class="kaila-route-panel">
+                <div class="kaila-route-summary">
+                    <div>
+                        <h3 class="mb-1">Live provider route</h3>
+                        <p class="text-muted mb-0">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km away` : "Waiting for provider travel update"} · ETA ${nav?.eta_minutes || "—"} min</p>
+                    </div>
+                    <button class="btn btn-outline-primary" type="button" data-view-link="detail"><i class="fa-solid fa-circle-info"></i> Job details</button>
+                </div>
+                <div class="kaila-route-map" data-client-route-map></div>
             </div>`);
     },
     completion() { return screens.detail(); },
@@ -767,6 +776,54 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
     bindFeedActions({ toast: showToast });
     bindAssistantActions({ toast: showToast });
     if (isStaffUser()) bindStaffActions({ toast: showToast });
+
+    const locationMap = document.querySelector("[data-location-map]");
+    if (locationMap) {
+        let locationPicker = null;
+        initLocationPicker({
+            mapEl: locationMap,
+            inputEl: document.querySelector("[data-location-search]"),
+            latInput: document.querySelector("[data-job-lat]"),
+            lngInput: document.querySelector("[data-job-lng]"),
+            areaInput: document.querySelector("[data-location-area]"),
+        }).then((picker) => {
+            locationPicker = picker;
+        }).catch((error) => showToast(error.message));
+
+        document.querySelector("[data-focus-location]")?.addEventListener("click", () => {
+            document.querySelector("[data-location-search]")?.focus();
+        });
+
+        document.querySelector("[data-use-current-location]")?.addEventListener("click", () => {
+            if (!navigator.geolocation) return showToast("Geolocation is not supported on this device.");
+            navigator.geolocation.getCurrentPosition((position) => {
+                const latInput = document.querySelector("[data-job-lat]");
+                const lngInput = document.querySelector("[data-job-lng]");
+                const positionValue = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+                if (latInput) latInput.value = position.coords.latitude.toFixed(7);
+                if (lngInput) lngInput.value = position.coords.longitude.toFixed(7);
+                if (locationPicker) {
+                    locationPicker.marker.setLatLng(positionValue);
+                    locationPicker.map.panTo(positionValue);
+                }
+                showToast("Current location captured.");
+            }, () => showToast("Could not get your current location."));
+        });
+    }
+
+    const clientRouteMap = document.querySelector("[data-client-route-map]");
+    if (clientRouteMap) {
+        const job = currentJob();
+        const nav = job?.navigation_state;
+        renderRouteMap(clientRouteMap, {
+            destination: { lat: job?.job_lat, lng: job?.job_lng },
+            provider: { lat: nav?.provider_lat, lng: nav?.provider_lng },
+            label: "Provider route",
+        }).catch((error) => showToast(error.message));
+    }
 
     document.querySelectorAll("[data-start-call]").forEach((button) => {
         button.addEventListener("click", async () => {

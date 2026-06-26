@@ -16,9 +16,11 @@ import {
     sendJobMessage,
     sendOffer,
     startNavigation,
+    stopNavigation,
     statusTone,
     store,
     timeAgo,
+    updateNavigation,
     requestTitle,
     formatBudget,
 } from "./kaila-api.js";
@@ -46,6 +48,7 @@ import {
     pill,
     sectionHead,
 } from "./kaila-ui-core.js";
+import { renderRouteMap } from "./kaila-maps.js";
 
 const providerName = () => store.user?.name || "Provider";
 const area = () => store.user?.area || store.user?.provider_profile?.area || "Your area";
@@ -207,10 +210,18 @@ const screens = {
         const job = currentJob();
         const nav = job?.navigation_state;
         return card(`
-            <div class="text-center py-5">
-                <i class="fa-solid fa-route fa-3x text-primary mb-3"></i>
-                <h3>Travel / Navigation</h3>
-                <p class="text-muted">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km` : "Navigation not started"} · ETA ${nav?.eta_minutes || "—"} min</p>
+            <div class="kaila-route-panel">
+                <div class="kaila-route-summary">
+                    <div>
+                        <h3 class="mb-1">Travel / Navigation</h3>
+                        <p class="text-muted mb-0">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km` : "Navigation not started"} · ETA ${nav?.eta_minutes || "—"} min</p>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" type="button" data-provider-location-update="${job?.id || ""}"><i class="fa-solid fa-location-crosshairs"></i> Share current location</button>
+                        <button class="btn btn-outline-danger" type="button" data-provider-stop-navigation="${job?.id || ""}"><i class="fa-solid fa-stop"></i> Stop</button>
+                    </div>
+                </div>
+                <div class="kaila-route-map" data-provider-route-map></div>
             </div>`);
     },
     "mark-done"() {
@@ -411,6 +422,42 @@ function bindProviderScreenActions({ navigate, toast: showToast }) {
                 showToast(error.message);
             }
         });
+    });
+
+    const providerRouteMap = document.querySelector("[data-provider-route-map]");
+    if (providerRouteMap) {
+        const job = currentJob();
+        const nav = job?.navigation_state;
+        renderRouteMap(providerRouteMap, {
+            destination: { lat: job?.job_lat, lng: job?.job_lng },
+            provider: { lat: nav?.provider_lat, lng: nav?.provider_lng },
+            label: "Travel route",
+        }).catch((error) => showToast(error.message));
+    }
+
+    document.querySelector("[data-provider-location-update]")?.addEventListener("click", async (event) => {
+        const requestId = event.currentTarget.dataset.providerLocationUpdate;
+        if (!requestId) return;
+        if (!navigator.geolocation) return showToast("Geolocation is not supported on this device.");
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+                await updateNavigation(requestId, position.coords.latitude, position.coords.longitude);
+                showToast("Location shared.");
+            } catch (error) {
+                showToast(error.message);
+            }
+        }, () => showToast("Could not get your current location."));
+    });
+
+    document.querySelector("[data-provider-stop-navigation]")?.addEventListener("click", async (event) => {
+        const requestId = event.currentTarget.dataset.providerStopNavigation;
+        if (!requestId) return;
+        try {
+            await stopNavigation(requestId);
+            showToast("Navigation stopped.");
+        } catch (error) {
+            showToast(error.message);
+        }
     });
 
     document.querySelector("[data-provider-delete]")?.addEventListener("submit", async (event) => {

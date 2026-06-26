@@ -4,7 +4,11 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "socket": "node socket/server.js"
+    },
+    "dependencies": {
+        "socket.io-client": "^4.8.1"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

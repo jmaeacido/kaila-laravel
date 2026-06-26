@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MarketplaceController::class, 'app'])->name('app');
@@ -16,7 +17,14 @@ Route::get('/jobs', [MarketplaceController::class, 'app'])->name('app.jobs');
 Route::get('/post', [MarketplaceController::class, 'app'])->name('app.post');
 Route::get('/messages', [MarketplaceController::class, 'app'])->name('app.messages');
 Route::get('/notifications', [MarketplaceController::class, 'app'])->name('app.notifications');
+Route::get('/feed', [MarketplaceController::class, 'app'])->name('app.feed');
 Route::get('/settings', [MarketplaceController::class, 'app'])->name('app.settings');
+Route::get('/assistant', [MarketplaceController::class, 'app'])->name('app.assistant');
+
+Route::get('/media/{id}', [MediaController::class, 'requestMedia'])->name('media.show');
+Route::get('/message-media/{id}', [MediaController::class, 'messageMedia'])->name('message-media.show');
+Route::get('/direct-media/{id}', [MediaController::class, 'directMedia'])->name('direct-media.show');
+Route::get('/feed-media/{id}', [MediaController::class, 'feedMedia'])->name('feed-media.show');
 
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('guest');
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('guest');
@@ -80,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/navigation/{serviceRequest}/stop', [MarketplaceController::class, 'navigationStop']);
     Route::post('/api/activity', [MarketplaceController::class, 'activity']);
     Route::post('/api/validation/decision-signal', [MarketplaceController::class, 'validationDecisionSignal']);
+    Route::post('/api/assistant/chat', [MarketplaceController::class, 'assistantChat']);
     Route::post('/api/analytics/insights', [MarketplaceController::class, 'analyticsInsights']);
     Route::post('/api/validation', [MarketplaceController::class, 'validationStore']);
     Route::put('/api/validation/{entry}', [MarketplaceController::class, 'validationUpdate']);

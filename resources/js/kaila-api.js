@@ -17,8 +17,18 @@ export const store = {
     selectedOfferId: null,
     jobMessages: [],
     directMessages: [],
+    feedPosts: [],
+    assistantMessages: [],
+    assistantSuggestions: [],
+    analyticsInsight: null,
+    incomingCall: null,
     listeners: new Set(),
 };
+
+export function patchStore(partial) {
+    Object.assign(store, partial);
+    emitChange();
+}
 
 export function onStoreChange(listener) {
     store.listeners.add(listener);
@@ -175,6 +185,7 @@ export async function createRequest(formData) {
             consent_to_rate: formData.consent_to_rate !== false,
             job_lat: formData.job_lat || null,
             job_lng: formData.job_lng || null,
+            attachments: formData.attachments || [],
         },
     });
     selectRequest(payload.request?.id);
@@ -218,12 +229,21 @@ export async function loadJobMessages(requestId) {
     return store.jobMessages;
 }
 
-export async function sendJobMessage(requestId, body) {
+export async function sendJobMessage(requestId, body, attachments = []) {
     const payload = await api(`/api/requests/${requestId}/messages`, {
         method: "POST",
-        body: { body },
+        body: { body, attachments },
     });
     await loadJobMessages(requestId);
+    return payload.message;
+}
+
+export async function sendDirectMessage(userId, body, attachments = []) {
+    const payload = await api(`/api/direct-conversations/${userId}/messages`, {
+        method: "POST",
+        body: { body, attachments },
+    });
+    await loadDirectMessages(userId);
     return payload.message;
 }
 
@@ -234,13 +254,50 @@ export async function loadDirectMessages(userId) {
     return store.directMessages;
 }
 
-export async function sendDirectMessage(userId, body) {
-    const payload = await api(`/api/direct-conversations/${userId}/messages`, {
+export async function loadFeed() {
+    const payload = await api("/api/feed");
+    store.feedPosts = payload.feed || [];
+    emitChange();
+    return store.feedPosts;
+}
+
+export async function createFeedPost(body, attachments = []) {
+    const payload = await api("/api/feed", {
         method: "POST",
-        body: { body },
+        body: { body, attachments },
     });
-    await loadDirectMessages(userId);
-    return payload.message;
+    await loadFeed();
+    return payload.post;
+}
+
+export async function feedReaction(postId, reaction) {
+    return api(`/api/feed/${postId}/reactions`, { method: "POST", body: { reaction } });
+}
+
+export async function feedComment(postId, body) {
+    return api(`/api/feed/${postId}/comments`, { method: "POST", body: { body } });
+}
+
+export async function assistantChat(messages) {
+    return api("/api/assistant/chat", { method: "POST", body: { messages } });
+}
+
+export async function loadAnalytics() {
+    store.analyticsInsight = await api("/api/analytics/insights", { method: "POST", body: {} });
+    emitChange();
+    return store.analyticsInsight;
+}
+
+export async function validationDecisionSignal(body) {
+    return api("/api/validation/decision-signal", { method: "POST", body });
+}
+
+export async function saveValidationEntry(body) {
+    return api("/api/validation", { method: "POST", body });
+}
+
+export function isStaffUser() {
+    return ["admin", "ops", "customer_service"].includes(store.user?.role);
 }
 
 export async function saveProfile(body) {

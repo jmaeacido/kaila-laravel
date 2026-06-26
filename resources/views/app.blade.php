@@ -15,13 +15,10 @@
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @endif
     @else
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-            @if (auth()->user()->role === 'provider')
-                @vite(['resources/css/kaila-ui.css', 'resources/js/provider-ui.js'])
-            @else
-                @vite(['resources/css/kaila-ui.css', 'resources/js/client-ui.js'])
-            @endif
+            @vite(['resources/css/kaila-ui.css', 'resources/js/marketplace-ui.js'])
         @endif
     @endguest
     <script>
@@ -31,6 +28,8 @@
             urgencies: @json($urgencies),
             address: @json($address),
             vapidPublicKey: @json($vapidPublicKey),
+            socketUrl: @json($socketUrl ?? config('kaila.socket.url')),
+            socketPath: @json($socketPath ?? config('kaila.socket.client_path')),
         };
     </script>
 </head>

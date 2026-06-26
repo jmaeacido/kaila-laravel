@@ -10,10 +10,14 @@ use App\Models\ProviderProfile;
 use App\Models\PushSubscription;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\GroqService;
 use App\Services\MarketplaceStateBuilder;
 use App\Services\MarketplaceWorkflow;
+use App\Services\MediaStorageService;
+use App\Services\MessageEncryptionService;
 use App\Services\NavigationService;
 use App\Services\NotificationService;
+use App\Services\RealtimeBroadcaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +35,10 @@ class MarketplaceController extends Controller
         private readonly MarketplaceWorkflow $workflow,
         private readonly NavigationService $navigation,
         private readonly MarketplaceStateBuilder $stateBuilder,
+        private readonly MessageEncryptionService $encryption,
+        private readonly MediaStorageService $media,
+        private readonly GroqService $groq,
+        private readonly RealtimeBroadcaster $realtime,
     ) {
     }
 
@@ -41,6 +49,8 @@ class MarketplaceController extends Controller
             'urgencies' => config('kaila.urgencies'),
             'address' => config('kaila.address'),
             'vapidPublicKey' => config('kaila.web_push.public_key'),
+            'socketUrl' => config('kaila.socket.url'),
+            'socketPath' => config('kaila.socket.client_path'),
         ]);
     }
 
@@ -237,6 +247,7 @@ class MarketplaceController extends Controller
             'details' => ['required', 'string', 'min:10', 'max:2000'],
             'permission_to_forward' => ['boolean'],
             'consent_to_rate' => ['boolean'],
+            'attachments' => ['nullable', 'array', 'max:6'],
         ]);
 
         $serviceRequest = ServiceRequest::create([
@@ -263,7 +274,18 @@ class MarketplaceController extends Controller
             $serviceRequest
         );
 
-        return response()->json(['request' => $serviceRequest->load('client', 'offers.provider')], 201);
+        $attachments = [];
+        if (!empty($data['attachments'])) {
+            $attachments = $this->media->attachToRequest($serviceRequest->id, 'request', $data['attachments']);
+        }
+
+        $this->realtime->emit('kaila.request.created', ['requestId' => $serviceRequest->id]);
+        $this->realtime->stateUpdated();
+
+        return response()->json([
+            'request' => $serviceRequest->load('client', 'offers.provider'),
+            'attachments' => $attachments,
+        ], 201);
     }
 
     public function updateRequest(Request $request, ServiceRequest $serviceRequest)
@@ -316,6 +338,12 @@ class MarketplaceController extends Controller
             $serviceRequest
         );
 
+        $this->realtime->toUser($serviceRequest->client_id, 'kaila.request.action', [
+            'requestId' => $serviceRequest->id,
+            'action' => 'offer',
+        ]);
+        $this->realtime->stateUpdated();
+
         return response()->json(['offer' => $offer->load('provider')], 201);
     }
 
@@ -328,6 +356,8 @@ class MarketplaceController extends Controller
             'service_request_id' => $serviceRequest->id,
             'provider_id' => $user->id,
         ], ['created_at' => now()]);
+
+        $this->realtime->stateUpdated();
 
         return response()->json(['ok' => true]);
     }
@@ -349,6 +379,12 @@ class MarketplaceController extends Controller
             $request->user(),
             $serviceRequest
         );
+
+        $this->realtime->emit('kaila.request.action', [
+            'requestId' => $serviceRequest->id,
+            'action' => 'accept',
+        ], ["user:{$serviceRequest->client_id}", "user:{$offer->provider_id}"]);
+        $this->realtime->stateUpdated();
 
         return response()->json(['request' => $serviceRequest->fresh(['acceptedProvider', 'offers.provider'])]);
     }
@@ -374,6 +410,7 @@ class MarketplaceController extends Controller
             'dispute_note' => ['nullable', 'string', 'max:1200'],
             'score' => ['nullable', 'integer', 'min:1', 'max:5'],
             'note' => ['nullable', 'string', 'max:1000'],
+            'attachments' => ['nullable', 'array', 'max:6'],
         ]);
 
         $before = $serviceRequest->status;
@@ -393,6 +430,20 @@ class MarketplaceController extends Controller
                 $request->user(),
                 $serviceRequest
             );
+            $this->realtime->emit('kaila.request.action', [
+                'requestId' => $serviceRequest->id,
+                'action' => $data['action'],
+                'status' => $serviceRequest->status,
+            ]);
+            $this->realtime->stateUpdated();
+        }
+
+        if (in_array($data['action'], ['provider_complete', 'dispute'], true) && !empty($data['attachments'])) {
+            $this->media->attachToRequest(
+                $serviceRequest->id,
+                $data['action'] === 'dispute' ? 'dispute' : 'completion',
+                $data['attachments']
+            );
         }
 
         return response()->json(['request' => $serviceRequest]);
@@ -403,7 +454,20 @@ class MarketplaceController extends Controller
         abort_unless($this->canReadConversation($serviceRequest, $request->user()), 403);
 
         return response()->json([
-            'messages' => $serviceRequest->messages()->with('sender:id,name,username,role')->oldest()->get(),
+            'messages' => $serviceRequest->messages()->with('sender:id,name,username,role')->oldest()->get()->map(function (JobMessage $message) {
+                $mapped = $this->mapJobMessage($message);
+                $mapped['attachments'] = DB::table('job_message_attachments')
+                    ->where('job_message_id', $message->id)
+                    ->get()
+                    ->map(fn ($row) => [
+                        'id' => $row->id,
+                        'url' => route('message-media.show', $row->id),
+                        'mimeType' => $row->mime_type,
+                        'originalName' => $row->original_name,
+                    ])->values()->all();
+
+                return $mapped;
+            }),
         ]);
     }
 
@@ -413,14 +477,26 @@ class MarketplaceController extends Controller
         abort_unless($this->canWriteConversation($serviceRequest, $user), 403);
 
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:2000'],
+            'body' => ['required_without:attachments', 'nullable', 'string', 'max:2000'],
+            'attachments' => ['nullable', 'array', 'max:6'],
         ]);
 
         $message = JobMessage::create([
             'service_request_id' => $serviceRequest->id,
             'sender_id' => $user->id,
-            'body' => $data['body'],
+            'body' => '',
+            'kind' => 'text',
         ]);
+        $message->forceFill([
+            'body' => $this->encryption->encrypt(trim((string) ($data['body'] ?? '')) ?: '[media]', $message->id),
+        ])->save();
+
+        $attachments = !empty($data['attachments'])
+            ? $this->media->attachToJobMessage($message->id, $data['attachments'])
+            : [];
+
+        $mapped = $this->mapJobMessage($message->load('sender:id,name,username,role'));
+        $mapped['attachments'] = $attachments;
 
         $recipients = collect([$serviceRequest->client, $serviceRequest->acceptedProvider])
             ->filter(fn ($recipient) => $recipient && $recipient->id !== $user->id);
@@ -429,13 +505,18 @@ class MarketplaceController extends Controller
             $recipients,
             'message.received',
             'New job message',
-            "{$user->name}: " . str($data['body'])->limit(80),
+            "{$user->name}: " . str($this->encryption->decrypt($message->body, $message->id))->limit(80),
             ['url' => route('app'), 'requestId' => $serviceRequest->id, 'messageId' => $message->id],
             $user,
             $serviceRequest
         );
 
-        return response()->json(['message' => $message->load('sender:id,name,username,role')], 201);
+        $this->realtime->emit('kaila.message.saved', [
+            'requestId' => $serviceRequest->id,
+            'message' => $mapped,
+        ], ["user:{$serviceRequest->client_id}", "user:{$serviceRequest->accepted_provider_id}"]);
+
+        return response()->json(['message' => $mapped], 201);
     }
 
     public function typing(Request $request, ServiceRequest $serviceRequest)
@@ -487,7 +568,20 @@ class MarketplaceController extends Controller
             ->limit(200)
             ->get();
 
-        return response()->json(['messages' => $messages]);
+        return response()->json(['messages' => $messages->map(function ($row) {
+            $mapped = $this->mapDirectMessage($row);
+            $mapped['attachments'] = DB::table('direct_message_attachments')
+                ->where('direct_message_id', $row->id)
+                ->get()
+                ->map(fn ($attachment) => [
+                    'id' => $attachment->id,
+                    'url' => route('direct-media.show', $attachment->id),
+                    'mimeType' => $attachment->mime_type,
+                    'originalName' => $attachment->original_name,
+                ])->values()->all();
+
+            return $mapped;
+        })]);
     }
 
     public function sendDirectMessage(Request $request, User $user)
@@ -496,19 +590,39 @@ class MarketplaceController extends Controller
         abort_unless($viewer->isStaff() || $user->isStaff(), 403);
         abort_if($this->isBlockedBetween($viewer->id, $user->id), 403, 'Messages are blocked between these accounts.');
 
-        $data = $request->validate(['body' => ['required', 'string', 'max:2000']]);
+        $data = $request->validate([
+            'body' => ['required_without:attachments', 'nullable', 'string', 'max:2000'],
+            'attachments' => ['nullable', 'array', 'max:6'],
+        ]);
         $id = DB::table('direct_messages')->insertGetId([
             'sender_id' => $viewer->id,
             'recipient_id' => $user->id,
-            'body' => $data['body'],
+            'body' => '',
             'kind' => 'text',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('direct_messages')->where('id', $id)->update([
+            'body' => $this->encryption->encrypt(trim((string) ($data['body'] ?? '')) ?: '[media]', $id),
+        ]);
+        $row = DB::table('direct_messages')->find($id);
+        $mapped = $this->mapDirectMessage($row);
+        $mapped['attachments'] = !empty($data['attachments'])
+            ? $this->media->attachToDirectMessage($id, $data['attachments'])
+            : [];
 
-        $this->notifications->notify($user, 'direct.message', 'New direct message', "{$viewer->name}: " . str($data['body'])->limit(80), ['directUserId' => $viewer->id], $viewer);
+        $this->notifications->notify(
+            $user,
+            'direct.message',
+            'New direct message',
+            "{$viewer->name}: " . str($data['body'])->limit(80),
+            ['directUserId' => $viewer->id],
+            $viewer
+        );
 
-        return response()->json(['message' => DB::table('direct_messages')->find($id)], 201);
+        $this->realtime->toUser($user->id, 'kaila.direct-message.saved', ['message' => $mapped]);
+
+        return response()->json(['message' => $mapped], 201);
     }
 
     public function directPresence(Request $request, User $user)
@@ -677,21 +791,46 @@ class MarketplaceController extends Controller
 
     public function feedIndex()
     {
+        $posts = FeedPost::query()->with('author:id,name,username,role')->where('visibility', 'public')->latest()->limit(50)->get();
+        $mediaByPost = DB::table('feed_post_media')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
+        $reactions = DB::table('feed_post_reactions')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
+        $comments = DB::table('feed_post_comments')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
+
         return response()->json([
-            'feed' => FeedPost::query()->with('author:id,name,username,role')->where('visibility', 'public')->latest()->limit(50)->get(),
+            'feed' => $posts->map(fn (FeedPost $post) => $this->mapFeedPost(
+                $post,
+                ($mediaByPost[$post->id] ?? collect())->map(fn ($row) => [
+                    'id' => $row->id,
+                    'url' => route('feed-media.show', $row->id),
+                    'mimeType' => $row->mime_type,
+                    'originalName' => $row->original_name,
+                ])->values()->all(),
+                $reactions[$post->id] ?? collect(),
+                $comments[$post->id] ?? collect(),
+            )),
         ]);
     }
 
     public function feed(Request $request)
     {
-        $data = $request->validate(['body' => ['required', 'string', 'max:1000']]);
+        $data = $request->validate([
+            'body' => ['required', 'string', 'max:1000'],
+            'attachments' => ['nullable', 'array', 'max:4'],
+        ]);
         $post = FeedPost::create([
             'author_id' => $request->user()->id,
             'body' => $data['body'],
             'visibility' => 'public',
         ]);
 
-        return response()->json(['post' => $post->load('author:id,name,username,role')], 201);
+        $media = !empty($data['attachments'])
+            ? $this->media->attachToFeedPost($post->id, $data['attachments'])
+            : [];
+
+        $payload = $this->mapFeedPost($post->load('author:id,name,username,role'), $media);
+        $this->realtime->emit('kaila.feed.updated', ['post' => $payload]);
+
+        return response()->json(['post' => $payload], 201);
     }
 
     public function feedUpdate(Request $request, FeedPost $feedPost)
@@ -722,7 +861,7 @@ class MarketplaceController extends Controller
     {
         $feedPost->increment('share_count');
 
-        return response()->json(['ok' => true, 'shareCount' => $feedPost->share_count + 1]);
+        return response()->json(['ok' => true, 'shareCount' => $feedPost->fresh()->share_count]);
     }
 
     public function feedReaction(Request $request, FeedPost $feedPost)
@@ -895,6 +1034,12 @@ class MarketplaceController extends Controller
     {
         $state = $this->navigation->start($serviceRequest, $request->user());
 
+        $this->realtime->emit('kaila.request.action', [
+            'requestId' => $serviceRequest->id,
+            'action' => 'navigation',
+            'navigationState' => $state,
+        ], ["user:{$serviceRequest->client_id}", "user:{$serviceRequest->accepted_provider_id}"]);
+
         return response()->json([
             'requestId' => $serviceRequest->id,
             'navigationState' => $state,
@@ -915,6 +1060,12 @@ class MarketplaceController extends Controller
             (float) $data['lng'],
         );
 
+        $this->realtime->emit('kaila.request.action', [
+            'requestId' => $serviceRequest->id,
+            'action' => 'navigation',
+            'navigationState' => $state,
+        ], ["user:{$serviceRequest->client_id}", "user:{$serviceRequest->accepted_provider_id}"]);
+
         return response()->json([
             'requestId' => $serviceRequest->id,
             'navigationState' => $state,
@@ -924,6 +1075,12 @@ class MarketplaceController extends Controller
     public function navigationStop(Request $request, ServiceRequest $serviceRequest)
     {
         $state = $this->navigation->stop($serviceRequest, $request->user());
+
+        $this->realtime->emit('kaila.request.action', [
+            'requestId' => $serviceRequest->id,
+            'action' => 'navigation-stop',
+            'navigationState' => $state,
+        ], ["user:{$serviceRequest->client_id}", "user:{$serviceRequest->accepted_provider_id}"]);
 
         return response()->json([
             'requestId' => $serviceRequest->id,
@@ -951,18 +1108,61 @@ class MarketplaceController extends Controller
             'type' => ['required', Rule::in(['client_survey', 'provider_interview'])],
             'responses' => ['required', 'array'],
         ]);
-        $score = count(array_filter($data['responses']));
-        $signal = $score >= 5 ? 'Positive' : ($score <= 1 ? 'Concern' : 'Neutral');
 
-        return response()->json(['decisionSignal' => $signal, 'reason' => 'Local Laravel scoring preserved for offline validation when AI analytics are not configured.']);
+        $result = $this->groq->validationSignal($data['type'], $data['responses']);
+
+        return response()->json([
+            'decisionSignal' => $result['decisionSignal'] ?? 'Neutral',
+            'reason' => $result['reason'] ?? 'Scored locally.',
+        ]);
     }
 
-    public function analyticsInsights()
+    public function analyticsInsights(Request $request)
     {
+        abort_unless($request->user()->isStaff(), 403);
+
+        $metrics = [
+            'requests' => ServiceRequest::query()->count(),
+            'activeProviders' => ProviderProfile::query()->where('status', 'Active')->count(),
+            'disputes' => ServiceRequest::query()->where('status', 'Disputed')->count(),
+            'responseRate' => Offer::query()->count(),
+        ];
+        $samples = ServiceRequest::query()->latest()->limit(5)->get(['category', 'status', 'area'])->toArray();
+        $insight = $this->groq->analyticsInsights($metrics, $samples);
+
         return response()->json([
-            'summary' => 'KAILA Laravel is collecting marketplace activity locally.',
-            'risks' => ['Review provider response time and unresolved disputes before scaling.'],
-            'actions' => ['Keep seeding provider coverage in active categories.'],
+            'summary' => $insight['summary'] ?? '',
+            'risks' => array_values($insight['risks'] ?? []),
+            'actions' => array_values($insight['actions'] ?? []),
+        ]);
+    }
+
+    public function assistantChat(Request $request)
+    {
+        abort_if($request->user()->role === 'ops', 403, 'Ops accounts are limited to validation work.');
+
+        $messages = collect($request->input('messages', []))
+            ->slice(-12)
+            ->map(fn ($message) => [
+                'role' => ($message['role'] ?? 'user') === 'assistant' ? 'assistant' : 'user',
+                'content' => Str::limit((string) ($message['content'] ?? ''), 2000),
+            ])
+            ->filter(fn ($message) => $message['content'])
+            ->values()
+            ->all();
+
+        abort_unless(($messages[count($messages) - 1]['role'] ?? '') === 'user', 422, 'Ask Katabang a question first.');
+
+        $context = [
+            'role' => $request->user()->role,
+            'area' => $request->user()->area,
+            'openRequests' => ServiceRequest::query()->where('client_id', $request->user()->id)->count(),
+        ];
+        $response = $this->groq->assistantAnswer($context, $messages);
+
+        return response()->json([
+            'answer' => Str::limit((string) ($response['answer'] ?? ''), 2400),
+            'suggestions' => array_slice(array_values($response['suggestions'] ?? []), 0, 4),
         ]);
     }
 
@@ -1158,5 +1358,39 @@ class MarketplaceController extends Controller
             + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($lngDelta / 2) ** 2;
 
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    private function mapJobMessage(JobMessage $message): array
+    {
+        $payload = $message->toArray();
+        $payload['body'] = $this->encryption->decrypt($message->body, $message->id);
+
+        return $payload;
+    }
+
+    private function mapDirectMessage(object $row): array
+    {
+        return [
+            'id' => $row->id,
+            'sender_id' => $row->sender_id,
+            'recipient_id' => $row->recipient_id,
+            'body' => $this->encryption->decrypt($row->body, $row->id),
+            'kind' => $row->kind,
+            'created_at' => $row->created_at,
+        ];
+    }
+
+    private function mapFeedPost(FeedPost $post, array $media = [], $reactions = null, $comments = null): array
+    {
+        return [
+            'id' => $post->id,
+            'body' => $post->body,
+            'shareCount' => $post->share_count,
+            'created_at' => $post->created_at,
+            'author' => $post->author,
+            'media' => $media,
+            'reactions' => collect($reactions)->count(),
+            'comments' => collect($comments)->count(),
+        ];
     }
 }

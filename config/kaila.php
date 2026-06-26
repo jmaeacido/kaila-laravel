@@ -313,6 +313,16 @@ return [
     ],
     'auto_confirm_hours' => env('KAILA_AUTO_CONFIRM_HOURS', 48),
     'rating_window_days' => env('KAILA_RATING_WINDOW_DAYS', 7),
+    'message_encryption_key' => env('KAILA_MESSAGE_ENCRYPTION_KEY'),
+    'socket' => [
+        'url' => env('KAILA_SOCKET_URL', 'http://127.0.0.1:6002'),
+        'bearer_token' => env('KAILA_SOCKET_BEARER_TOKEN'),
+        'client_path' => env('KAILA_SOCKET_CLIENT_PATH', '/socket.io'),
+    ],
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'llama-3.1-8b-instant'),
+    ],
     'web_push' => [
         'subject' => env('VAPID_SUBJECT', env('APP_URL', 'mailto:hello@example.com')),
         'public_key' => env('VAPID_PUBLIC_KEY'),
@@ -324,9 +334,15 @@ return [
         'facebook_app_secret' => env('KAILA_FACEBOOK_APP_SECRET'),
     ],
     'rtc' => [
-        'ice_servers' => json_decode(env('KAILA_RTC_ICE_SERVERS', '[{"urls":"stun:stun.l.google.com:19302"}]'), true) ?: [
-            ['urls' => 'stun:stun.l.google.com:19302'],
-        ],
+        'ice_servers' => array_values(array_filter(array_merge(
+            json_decode(env('KAILA_RTC_ICE_SERVERS', '[]'), true) ?: [],
+            env('KAILA_TURN_URLS') ? array_map(fn ($url) => [
+                'urls' => trim($url),
+                'username' => env('KAILA_TURN_USERNAME'),
+                'credential' => env('KAILA_TURN_CREDENTIAL'),
+            ], explode(',', env('KAILA_TURN_URLS'))) : [],
+            [['urls' => 'stun:stun.l.google.com:19302']]
+        ))),
     ],
     'route_distance_url' => env('KAILA_ROUTE_DISTANCE_URL', 'https://router.project-osrm.org/route/v1/driving'),
     'mobile' => [

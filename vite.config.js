@@ -10,8 +10,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/kaila-ui.css',
                 'resources/js/app.js',
-                'resources/js/client-ui.js',
-                'resources/js/provider-ui.js',
+                'resources/js/marketplace-ui.js',
             ],
             refresh: true,
             fonts: [

@@ -10,7 +10,9 @@ use App\Models\ProviderProfile;
 use App\Models\PushSubscription;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\MarketplaceStateBuilder;
 use App\Services\MarketplaceWorkflow;
+use App\Services\NavigationService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +29,8 @@ class MarketplaceController extends Controller
     public function __construct(
         private readonly NotificationService $notifications,
         private readonly MarketplaceWorkflow $workflow,
+        private readonly NavigationService $navigation,
+        private readonly MarketplaceStateBuilder $stateBuilder,
     ) {
     }
 
@@ -82,6 +86,7 @@ class MarketplaceController extends Controller
     public function state(Request $request)
     {
         $user = $request->user();
+        $this->workflow->autoConfirmDue($this->notifications);
 
         $requests = ServiceRequest::query()
             ->with(['client:id,name,username,area', 'acceptedProvider:id,name,username', 'offers.provider:id,name,username,area', 'messages.sender:id,name,username'])
@@ -107,15 +112,31 @@ class MarketplaceController extends Controller
             ->limit(60)
             ->get();
 
+        $navigationStates = $this->stateBuilder->navigationStatesFor($requests->pluck('id')->all());
+        $requestsPayload = $requests->map(function (ServiceRequest $item) use ($navigationStates) {
+            $payload = $item->toArray();
+            $payload['navigation_state'] = $navigationStates[$item->id] ?? null;
+
+            return $payload;
+        });
+
+        $metrics = match (true) {
+            $user->role === 'provider' => ['provider' => $this->stateBuilder->providerMetrics($user)],
+            $user->role === 'client' => ['client' => $this->stateBuilder->clientMetrics($user)],
+            default => [],
+        };
+
         return response()->json([
             'user' => $user->load('providerProfile'),
             'categories' => config('kaila.categories'),
             'urgencies' => config('kaila.urgencies'),
-            'requests' => $requests,
+            'requests' => $requestsPayload,
             'providers' => ProviderProfile::query()->with('user:id,name,username,area')->where('status', 'Active')->latest()->limit(30)->get(),
             'feed' => FeedPost::query()->with('author:id,name,username,role')->where('visibility', 'public')->latest()->limit(20)->get(),
             'notifications' => $user->notifications()->latest()->limit(30)->get(),
             'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
+            'supportDesk' => $this->stateBuilder->supportDesk(),
+            'metrics' => $metrics,
             'pushStatus' => [
                 'configured' => (bool) (config('kaila.web_push.public_key') && config('kaila.web_push.private_key')),
                 'subscriptions' => PushSubscription::query()->where('user_id', $user->id)->count(),
@@ -142,6 +163,10 @@ class MarketplaceController extends Controller
 
     public function deleteAccount(Request $request)
     {
+        $request->validate([
+            'confirm' => ['required', 'in:DELETE'],
+        ]);
+
         $user = $request->user();
         DB::table('push_tokens')->where('user_id', $user->id)->delete();
         PushSubscription::query()->where('user_id', $user->id)->delete();
@@ -862,7 +887,47 @@ class MarketplaceController extends Controller
 
         return response()->json([
             'requestId' => $serviceRequest->id,
-            'navigationState' => DB::table('job_navigation_states')->where('service_request_id', $serviceRequest->id)->first(),
+            'navigationState' => $this->navigation->stateFor($serviceRequest),
+        ]);
+    }
+
+    public function navigationStart(Request $request, ServiceRequest $serviceRequest)
+    {
+        $state = $this->navigation->start($serviceRequest, $request->user());
+
+        return response()->json([
+            'requestId' => $serviceRequest->id,
+            'navigationState' => $state,
+        ]);
+    }
+
+    public function navigationUpdate(Request $request, ServiceRequest $serviceRequest)
+    {
+        $data = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $state = $this->navigation->updateLocation(
+            $serviceRequest,
+            $request->user(),
+            (float) $data['lat'],
+            (float) $data['lng'],
+        );
+
+        return response()->json([
+            'requestId' => $serviceRequest->id,
+            'navigationState' => $state,
+        ]);
+    }
+
+    public function navigationStop(Request $request, ServiceRequest $serviceRequest)
+    {
+        $state = $this->navigation->stop($serviceRequest, $request->user());
+
+        return response()->json([
+            'requestId' => $serviceRequest->id,
+            'navigationState' => $state,
         ]);
     }
 

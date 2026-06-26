@@ -75,6 +75,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/push-status', [MarketplaceController::class, 'pushStatus']);
     Route::get('/api/route-distance', [MarketplaceController::class, 'routeDistance']);
     Route::get('/api/navigation/{serviceRequest}', [MarketplaceController::class, 'navigation']);
+    Route::post('/api/navigation/{serviceRequest}/start', [MarketplaceController::class, 'navigationStart']);
+    Route::post('/api/navigation/{serviceRequest}/location', [MarketplaceController::class, 'navigationUpdate']);
+    Route::post('/api/navigation/{serviceRequest}/stop', [MarketplaceController::class, 'navigationStop']);
     Route::post('/api/activity', [MarketplaceController::class, 'activity']);
     Route::post('/api/validation/decision-signal', [MarketplaceController::class, 'validationDecisionSignal']);
     Route::post('/api/analytics/insights', [MarketplaceController::class, 'analyticsInsights']);

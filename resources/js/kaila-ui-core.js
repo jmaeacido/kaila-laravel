@@ -1,6 +1,7 @@
-export const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
-export const cfg = window.KAILA || {};
-export const user = cfg.user || {};
+import { logout, onStoreChange, refreshState, store } from "./kaila-api.js";
+
+export { store, refreshState } from "./kaila-api.js";
+export * from "./kaila-api.js";
 
 export function icon(name, extra = "") {
     return `<i class="bi ${name} ${extra}" aria-hidden="true"></i>`;
@@ -53,28 +54,22 @@ export function greeting() {
     return "Good evening";
 }
 
-export function bindForms(onSubmit) {
-    document.querySelectorAll("form[data-kaila-form]").forEach((form) => {
-        form.addEventListener("submit", (event) => {
-            event.preventDefault();
-            toast(form.dataset.toast || "Saved in UI prototype.");
-            onSubmit?.(form);
-        });
-    });
+export function escapeHtml(value = "") {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+    }[char]));
 }
 
-export function bindActions() {
-    document.querySelectorAll("[data-toast]").forEach((button) => {
-        button.addEventListener("click", () => toast(button.dataset.toast));
-    });
-    document.querySelector("[data-logout]")?.addEventListener("click", async () => {
-        await fetch("/auth/logout", {
-            method: "POST",
-            headers: { "X-CSRF-TOKEN": csrf, Accept: "application/json" },
-            credentials: "same-origin",
-        }).catch(() => {});
-        window.location.assign("/login");
-    });
+export function loadingScreen(message = "Loading your KAILA workspace...") {
+    return `<div class="kaila-empty">${icon("bi-arrow-repeat")} ${escapeHtml(message)}</div>`;
+}
+
+export function errorScreen(message) {
+    return `<div class="kaila-empty">${icon("bi-exclamation-triangle")} ${escapeHtml(message)}</div>`;
 }
 
 export function createApp(options) {
@@ -90,6 +85,7 @@ export function createApp(options) {
         topbarExtra = "",
         getTitle,
         getSubtitle,
+        bindScreenActions,
     } = options;
 
     let activeView = currentView();
@@ -123,6 +119,22 @@ export function createApp(options) {
                 navigate(button.dataset.viewLink);
             });
         });
+        document.querySelectorAll("[data-select-request]").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                const { selectRequest } = options.storeActions || {};
+                selectRequest?.(button.dataset.selectRequest);
+                if (button.dataset.viewLink) navigate(button.dataset.viewLink);
+            });
+        });
+    }
+
+    function bindActions() {
+        document.querySelectorAll("[data-toast]").forEach((button) => {
+            button.addEventListener("click", () => toast(button.dataset.toast));
+        });
+        document.querySelector("[data-logout]")?.addEventListener("click", () => logout());
+        bindScreenActions?.({ navigate, toast, activeView });
     }
 
     function render() {
@@ -130,10 +142,9 @@ export function createApp(options) {
         if (!root) return;
 
         document.body.classList.add("kaila-auth");
-
-        const logo = theme === "provider"
-            ? "/assets/brand/kaila-logo.png"
-            : "/assets/brand/kaila-logo.png";
+        const logo = "/assets/brand/kaila-logo.png";
+        const userName = store.user?.name || "KAILA User";
+        const unread = store.unreadNotifications || 0;
 
         root.innerHTML = `
             <div class="kaila-app">
@@ -143,7 +154,7 @@ export function createApp(options) {
                     </a>
                     ${sidebarProfile}
                     <nav class="kaila-nav" aria-label="Main navigation">
-                        ${navItems.filter(([id]) => !id.startsWith("_")).map(([id, label, iconName, , badge]) => `
+                        ${navItems.filter(([id]) => !id.startsWith("_")).slice(0, 6).map(([id, label, iconName, , badge]) => `
                             <button class="kaila-nav__item ${id === activeView ? "active" : ""}" type="button" data-view-link="${id}">
                                 ${icon(iconName)}<span>${label}</span>
                                 ${badge ? `<span class="kaila-badge">${badge}</span>` : ""}
@@ -155,20 +166,18 @@ export function createApp(options) {
                 <div class="kaila-main">
                     <header class="kaila-topbar">
                         <div class="kaila-topbar__left">
-                            <div class="kaila-topbar__mobile-logo">
-                                <img src="${logo}" alt="KAILA">
-                            </div>
-                            <h1>${screenTitle()}</h1>
-                            ${screenSubtitle() ? `<p>${screenSubtitle()}</p>` : ""}
+                            <div class="kaila-topbar__mobile-logo"><img src="${logo}" alt="KAILA"></div>
+                            <h1>${escapeHtml(screenTitle())}</h1>
+                            ${screenSubtitle() ? `<p>${escapeHtml(screenSubtitle())}</p>` : ""}
                         </div>
                         <div class="kaila-topbar__actions">
                             ${topbarExtra}
                             <button class="kaila-icon-btn" type="button" data-view-link="notifications" aria-label="Notifications">
-                                ${icon("bi-bell")}<span class="kaila-badge">3</span>
+                                ${icon("bi-bell")}${unread ? `<span class="kaila-badge">${unread}</span>` : ""}
                             </button>
                             <div class="kaila-user-chip">
-                                ${avatar(user.name || (theme === "provider" ? "Juan Dela Cruz" : "Alex D."))}
-                                <span>${user.name || (theme === "provider" ? "Juan Dela Cruz" : "Alex D.")}</span>
+                                ${avatar(userName)}
+                                <span>${escapeHtml(userName)}</span>
                                 ${icon("bi-chevron-down")}
                             </div>
                         </div>
@@ -189,9 +198,15 @@ export function createApp(options) {
         `;
 
         const screen = document.querySelector("[data-screen]");
-        screen.innerHTML = screens[activeView]?.() || screens[navItems[0][0]]?.() || "";
+        if (store.loading && !store.requests.length) {
+            screen.innerHTML = loadingScreen();
+        } else if (store.error && !store.requests.length) {
+            screen.innerHTML = errorScreen(store.error);
+        } else {
+            screen.innerHTML = screens[activeView]?.() || screens[navItems[0][0]]?.() || errorScreen("Screen not found.");
+        }
+
         bindLinks();
-        bindForms();
         bindActions();
     }
 
@@ -200,6 +215,8 @@ export function createApp(options) {
         render();
     });
 
-    render();
-    return { navigate, toast };
+    onStoreChange(render);
+    refreshState();
+
+    return { navigate, toast, render };
 }

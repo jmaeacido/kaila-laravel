@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\ProviderProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -25,11 +26,26 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', Rule::in(['client', 'provider'])],
             'area' => ['required', 'string', 'max:190'],
-            'category' => ['nullable', 'string', 'max:160'],
+            'category' => [
+                Rule::requiredIf(fn () => $request->input('role') === 'provider'),
+                'nullable',
+                'string',
+                'max:160',
+            ],
             'contact_number' => ['required', 'string', 'max:80'],
             'messenger_link' => ['nullable', 'string', 'max:255'],
             'preferred_contact_channel' => ['required', 'string', 'max:80'],
             'best_contact_time' => ['nullable', 'string', 'max:120'],
+            'provider_type' => ['nullable', 'string', 'max:80'],
+            'specific_services' => ['nullable', 'string', 'max:1000'],
+            'coverage_area' => ['nullable', 'string', 'max:1000'],
+            'availability' => ['nullable', 'string', 'max:80'],
+            'emergency_availability' => ['nullable', 'string', 'max:80'],
+            'years_experience' => ['nullable', 'string', 'max:80'],
+            'skills' => ['nullable', 'string', 'max:1000'],
+            'minimum_fee' => ['nullable', 'string', 'max:80'],
+            'price_range' => ['nullable', 'string', 'max:1000'],
+            'rules_agreement' => [Rule::requiredIf(fn () => $request->input('role') === 'provider'), 'nullable', 'accepted'],
             'data_privacy_consent' => ['accepted'],
         ]);
 
@@ -56,6 +72,26 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
             'account_status' => 'active',
         ]);
+
+        if ($user->role === 'provider') {
+            ProviderProfile::create([
+                'user_id' => $user->id,
+                'display_name' => $user->name,
+                'provider_type' => $data['provider_type'] ?? 'Individual',
+                'category' => $data['category'] ?? 'General local service',
+                'specific_services' => $data['specific_services'] ?? null,
+                'area' => $data['area'],
+                'coverage_area' => $data['coverage_area'] ?? null,
+                'availability' => $data['availability'] ?? 'Available',
+                'emergency_availability' => $data['emergency_availability'] ?? null,
+                'years_experience' => $data['years_experience'] ?? null,
+                'skills' => $data['skills'] ?? null,
+                'minimum_fee' => $data['minimum_fee'] ?? null,
+                'price_range' => $data['price_range'] ?? null,
+                'rules_agreement' => true,
+                'status' => 'Active',
+            ]);
+        }
 
         Auth::login($user);
 
@@ -147,6 +183,16 @@ class AuthController extends Controller
             'messenger_link' => ['nullable', 'string', 'max:255'],
             'preferred_contact_channel' => ['nullable', 'string', 'max:80'],
             'best_contact_time' => ['nullable', 'string', 'max:120'],
+            'provider_type' => ['nullable', 'string', 'max:80'],
+            'specific_services' => ['nullable', 'string', 'max:1000'],
+            'coverage_area' => ['nullable', 'string', 'max:1000'],
+            'availability' => ['nullable', 'string', 'max:80'],
+            'emergency_availability' => ['nullable', 'string', 'max:80'],
+            'years_experience' => ['nullable', 'string', 'max:80'],
+            'skills' => ['nullable', 'string', 'max:1000'],
+            'minimum_fee' => ['nullable', 'string', 'max:80'],
+            'price_range' => ['nullable', 'string', 'max:1000'],
+            'rules_agreement' => ['nullable'],
             'data_privacy_consent' => ['nullable'],
         ]);
 
@@ -292,7 +338,7 @@ class AuthController extends Controller
         $nameParts = $this->namePartsFromInput($input, $profile['name'] ?? '');
         $displayName = $this->displayName($nameParts) ?: (string) ($profile['name'] ?? 'KAILA user');
 
-        return User::create([
+        $user = User::create([
             'name' => $displayName,
             'first_name' => $nameParts['first_name'],
             'middle_name' => $nameParts['middle_name'],
@@ -314,6 +360,28 @@ class AuthController extends Controller
             'data_privacy_consent' => filter_var($input['data_privacy_consent'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'account_status' => 'active',
         ]);
+
+        if ($user->role === 'provider') {
+            ProviderProfile::create([
+                'user_id' => $user->id,
+                'display_name' => $user->name,
+                'provider_type' => $input['provider_type'] ?? 'Individual',
+                'category' => $input['category'] ?? 'General local service',
+                'specific_services' => $input['specific_services'] ?? null,
+                'area' => $user->area,
+                'coverage_area' => $input['coverage_area'] ?? null,
+                'availability' => $input['availability'] ?? 'Available',
+                'emergency_availability' => $input['emergency_availability'] ?? null,
+                'years_experience' => $input['years_experience'] ?? null,
+                'skills' => $input['skills'] ?? null,
+                'minimum_fee' => $input['minimum_fee'] ?? null,
+                'price_range' => $input['price_range'] ?? null,
+                'rules_agreement' => filter_var($input['rules_agreement'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'status' => 'Active',
+            ]);
+        }
+
+        return $user;
     }
 
     private function publicSocialProfile(array $profile): array

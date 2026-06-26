@@ -178,6 +178,24 @@ function pushUrl(path, payload = {}) {
     }
 }
 
+function canUseBrowserBack() {
+    if (history.length <= 1) return false;
+    try {
+        if (!document.referrer) return false;
+        return new URL(document.referrer).origin === window.location.origin;
+    } catch {
+        return false;
+    }
+}
+
+function goBackOrFallback(fallback = "/") {
+    if (canUseBrowserBack()) {
+        history.back();
+        return;
+    }
+    window.location.assign(fallback);
+}
+
 function formData(form) {
     const data = Object.fromEntries(new FormData(form).entries());
     $$('input[type="checkbox"]', form).forEach((input) => {
@@ -399,7 +417,11 @@ function setAuthMode(mode, options = {}) {
     if (authMessage) authMessage.textContent = "";
 
     if (options.updateUrl !== false) {
-        const path = authPaths[mode] || "/";
+        const registerForm = $("[data-register-form]");
+        const providerStep = Number(registerForm?.dataset.providerStep || 1);
+        const path = mode === "register" && registerForm?.dataset.registerRole === "provider"
+            ? (providerStep > 1 ? `/register?role=provider&step=${providerStep}` : "/register?role=provider")
+            : (authPaths[mode] || "/");
         options.replace ? replaceUrl(path) : pushUrl(path, { authMode: mode });
     }
 }
@@ -425,6 +447,83 @@ function setRegisterStep(step, options = {}) {
     }
 }
 
+function setRegisterRole(role = "client") {
+    const registerForm = $("[data-register-form]");
+    if (!registerForm) return;
+
+    const isProvider = role === "provider";
+    const registerPage = registerForm.closest(".client-register-page");
+    const roleField = $('input[name="role"]', registerForm);
+    const hiddenCategory = $('input[type="hidden"][name="category"]', registerForm);
+    const title = $("[data-register-title]");
+    const subtitle = $("[data-register-subtitle]");
+
+    registerForm.dataset.registerRole = isProvider ? "provider" : "client";
+    registerPage?.classList.toggle("is-provider-register", isProvider);
+    if (roleField) roleField.value = isProvider ? "provider" : "client";
+    if (hiddenCategory) hiddenCategory.disabled = isProvider;
+    if (title) title.textContent = isProvider ? "Create Account (Provider)" : "Create Account (Client)";
+    if (subtitle) subtitle.textContent = isProvider ? "Create your provider profile and start receiving local jobs." : "Join KAILA and get things done.";
+
+    $$("[data-client-register] input, [data-client-register] select, [data-client-register] textarea", registerForm).forEach((field) => {
+        field.disabled = isProvider;
+    });
+    $$("[data-provider-register] input, [data-provider-register] select, [data-provider-register] textarea", registerForm).forEach((field) => {
+        field.disabled = !isProvider;
+    });
+    $$("[data-client-register]", registerForm).forEach((section) => {
+        section.hidden = isProvider;
+    });
+    const providerShell = $("[data-provider-register]", registerForm);
+    if (providerShell) providerShell.hidden = !isProvider;
+    if (isProvider) setProviderRegisterStep(Number(registerForm.dataset.providerStep || 1));
+}
+
+function setProviderRegisterStep(step = 1, options = {}) {
+    const registerForm = $("[data-register-form]");
+    if (!registerForm) return;
+
+    const nextStep = Math.min(Math.max(Number(step) || 1, 1), 5);
+    registerForm.dataset.providerStep = String(nextStep);
+
+    $$("[data-provider-step-section]", registerForm).forEach((section) => {
+        section.hidden = section.dataset.providerStepSection !== String(nextStep);
+    });
+
+    const labels = ["Profile", "Services", "Availability", "Verification", "Agreements"];
+    $$(".provider-stepper span", registerForm).forEach((item, index) => {
+        const itemStep = index + 1;
+        item.classList.toggle("is-active", itemStep === nextStep);
+        item.classList.toggle("is-complete", itemStep < nextStep);
+        const icon = $("b", item);
+        if (icon && itemStep < nextStep) icon.innerHTML = '<i class="bi bi-check-lg"></i>';
+        if (icon && itemStep === nextStep) icon.innerHTML = nextStep > 1 ? String(nextStep) : '<i class="bi bi-person"></i>';
+        if (icon && itemStep > nextStep) {
+            icon.innerHTML = itemStep === 2 ? '<i class="bi bi-tools"></i>' : itemStep === 3 ? '<i class="bi bi-calendar-check"></i>' : itemStep === 4 ? '<i class="bi bi-shield-check"></i>' : '<i class="bi bi-check-lg"></i>';
+        }
+        item.title = labels[index] || "";
+    });
+
+    const submit = $(".register-submitbar .landing-primary", registerForm);
+    const submitbar = $(".register-submitbar", registerForm);
+    if (submitbar) {
+        submitbar.dataset.providerStepLabel = `Step ${nextStep} of 5`;
+        submitbar.style.setProperty("--provider-progress", `${nextStep * 20}%`);
+    }
+    if (submit) {
+        submit.dataset.providerButtonLabel = nextStep === 5 ? "Create Provider Account" : `Continue to ${labels[nextStep]}`;
+    }
+
+    if (options.updateUrl) {
+        const path = nextStep > 1 ? `/register?role=provider&step=${nextStep}` : "/register?role=provider";
+        options.replace ? history.replaceState({ providerStep: nextStep }, "", path) : history.pushState({ providerStep: nextStep }, "", path);
+    }
+
+    if (options.scrollToTop !== false) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+}
+
 function bindAuth() {
     fillSelects();
     bindAddressDropdowns();
@@ -433,6 +532,12 @@ function bindAuth() {
     });
     $$("[data-social-provider]").forEach((button) => {
         button.addEventListener("click", () => handleSocialAuth(button.dataset.socialProvider, button.dataset.socialMode || "login"));
+    });
+    $$("[data-history-back]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            event.preventDefault();
+            goBackOrFallback(button.getAttribute("href") || "/");
+        });
     });
 
     const registerForm = $("[data-register-form]");
@@ -449,8 +554,43 @@ function bindAuth() {
         };
 
         if (window.location.hash === "#step2") setRegisterStep(2);
+        const params = new URLSearchParams(window.location.search);
+        setRegisterRole(params.get("role") === "provider" ? "provider" : "client");
+        if (params.get("role") === "provider") setProviderRegisterStep(Number(params.get("step") || 1), { replace: true, scrollToTop: false });
         $("[data-register-next]", registerForm)?.addEventListener("click", () => setRegisterStep(2, { updateUrl: true, scrollToTop: true }));
+        $$(".register-submitbar .landing-primary", registerForm).forEach((button) => {
+            button.addEventListener("click", (event) => {
+                if (registerForm.dataset.registerRole !== "provider") return;
+                const step = Number(registerForm.dataset.providerStep || 1);
+                if (step >= 5) return;
+                event.preventDefault();
+                setProviderRegisterStep(step + 1, { updateUrl: true });
+            });
+        });
+        $$("[data-provider-prev]", registerForm).forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+                setProviderRegisterStep(Number(registerForm.dataset.providerStep || 1) - 1, { updateUrl: true });
+            });
+        });
+        const syncProviderServices = () => {
+            const selected = $$(".provider-service-card input:checked", registerForm)
+                .map((input) => input.closest(".provider-service-card")?.querySelector("span")?.textContent?.trim())
+                .filter(Boolean);
+            const categoryField = $('[data-provider-register] input[type="hidden"][name="category"]', registerForm);
+            const selectedCount = $(".provider-selected-count b", registerForm);
+            if (categoryField) categoryField.value = selected[0] || "General local service";
+            if (selectedCount) selectedCount.textContent = `${selected.length} ${selected.length === 1 ? "category" : "categories"}`;
+        };
+        $$(".provider-service-card input", registerForm).forEach((input) => {
+            input.addEventListener("change", () => {
+                input.closest(".provider-service-card")?.classList.toggle("is-selected", input.checked);
+                syncProviderServices();
+            });
+        });
+        syncProviderServices();
         $(".register-back")?.addEventListener("click", (event) => {
+            if (event.defaultPrevented) return;
             if (registerForm.dataset.step !== "2") return;
             event.preventDefault();
             setRegisterStep(1, { updateUrl: true, replace: true, scrollToTop: true });
@@ -471,6 +611,10 @@ function bindAuth() {
                 if (group === "best_contact_time_choice") {
                     const field = $('[name="best_contact_time"]', registerForm);
                     if (field) field.value = input.value;
+                }
+                if (group === "role_preview") {
+                    setRegisterRole(input.value);
+                    history.replaceState({ authMode: "register" }, "", input.value === "provider" ? "/register?role=provider" : "/register");
                 }
             });
         });
@@ -493,6 +637,10 @@ function bindAuth() {
 
     $("#register-form")?.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (event.currentTarget.dataset.registerRole === "provider" && Number(event.currentTarget.dataset.providerStep || 1) < 5) {
+            setProviderRegisterStep(Number(event.currentTarget.dataset.providerStep || 1) + 1, { updateUrl: true });
+            return;
+        }
         try {
             await api("/auth/register", { method: "POST", body: formData(event.currentTarget) });
             window.location.assign("/home");
@@ -932,7 +1080,11 @@ window.addEventListener("popstate", () => {
         const mode = window.location.pathname === authPaths.register ? "register" : "login";
         setAuthMode(mode, { updateUrl: false });
         if (mode === "register") {
-            setRegisterStep(window.location.hash === "#step2" ? 2 : 1);
+            const params = new URLSearchParams(window.location.search);
+            const role = params.get("role") === "provider" ? "provider" : "client";
+            setRegisterRole(role);
+            if (role === "provider") setProviderRegisterStep(Number(params.get("step") || 1), { scrollToTop: false });
+            else setRegisterStep(window.location.hash === "#step2" ? 2 : 1);
         }
         return;
     }

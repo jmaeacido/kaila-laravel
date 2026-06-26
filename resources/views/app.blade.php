@@ -63,37 +63,55 @@
                     $legalPages = [
                         'privacy-policy' => [
                             'label' => 'Privacy Policy',
-                            'eyebrow' => 'Privacy',
+                            'eyebrow' => 'KAILA pilot policy',
                             'title' => 'Privacy Policy',
-                            'lede' => 'KAILA protects the account, request, message, and service details needed to connect clients with local providers.',
+                            'lede' => 'Last updated June 6, 2026',
+                            'heroIcon' => 'bi-shield-lock',
                             'items' => [
-                                ['What we collect', 'Account details, contact information, service requests, messages, ratings, location-related job details, device data, and payment-status information when needed to operate the service.'],
-                                ['How we use it', 'We use information to match requests with providers, keep conversations and job updates available, improve safety, prevent abuse, and maintain the KAILA platform.'],
-                                ['Your choices', 'You can update your profile, control what you share in requests and messages, and contact support for account or data questions.'],
+                                ['bi-database-lock', 'What We Collect', 'KAILA collects account details, role, contact preferences, service request information, provider profiles, offers, messages, call signaling records, uploaded media, ratings, reports, blocks, device push tokens, validation survey/interview entries, location pins, and operational logs needed to run the pilot marketplace.'],
+                                ['bi-diagram-3', 'How We Use Data', 'We use data to match clients and providers, estimate route distance, support live job-site navigation, operate chat and calls, send notifications, support disputes, protect users, improve local service quality, and measure pilot performance.'],
+                                ['bi-geo-alt', 'Location And Navigation', 'Users may pin a job site or share device location to estimate distance and show navigation. Live tracking runs only after the user starts it and may continue while the navigation map is minimized until the user stops navigation or closes the map.'],
+                                ['bi-share', 'Sharing', 'Contact details and job-site details are shared only when needed for accepted jobs, support handling, dispute review, or safety review. KAILA does not sell pilot user data.'],
+                                ['bi-chat-square-heart', 'Messages, Media, Reports, And Ratings', 'Job messages and direct support messages may be reviewed by authorized staff for support, safety, dispute handling, and abuse prevention. Ratings are shown after both sides rate or the rating window closes.'],
+                                ['bi-clipboard-data', 'Validation Research', 'Client surveys and provider interviews are used for pilot planning, matching decisions, and product validation. Staff should avoid collecting unnecessary sensitive information and may use nicknames when a full name is not needed.'],
+                                ['bi-sliders', 'Your Choices', 'You can update profile details, block users, report users or jobs, contact support, disable device notifications, and request account deletion from Settings.'],
+                                ['bi-archive', 'Retention', 'Account deletion removes login access and anonymizes profile/contact details. Job, rating, report, and message history may be retained where needed for safety, dispute, legal, or operational records.'],
+                                ['bi-headset', 'Contact', 'Use Contact Support in the app for privacy questions, account help, or safety concerns.'],
                             ],
                         ],
                         'terms' => [
                             'label' => 'Terms',
-                            'eyebrow' => 'Terms',
+                            'eyebrow' => 'KAILA pilot rules',
                             'title' => 'Terms of Service',
-                            'lede' => 'These terms outline the basic expectations for using KAILA to request, offer, manage, and complete local service work.',
+                            'lede' => 'Last updated June 6, 2026',
+                            'heroIcon' => 'bi-file-earmark-check',
                             'items' => [
-                                ['Using KAILA', 'Clients and providers are responsible for keeping account details accurate, communicating respectfully, and using the platform for legitimate local service needs.'],
-                                ['Jobs and payments', 'Requests, offers, accepted work, completion checks, ratings, and payment arrangements must reflect the actual service agreed by both sides.'],
-                                ['Safety and conduct', 'KAILA may limit, suspend, or remove accounts, requests, messages, or content that appear unsafe, fraudulent, abusive, or outside platform rules.'],
+                                ['bi-shop-window', 'Marketplace Role', 'KAILA helps clients and providers find each other, compare offers, coordinate work, and keep job records. Providers are independent service providers, not KAILA employees.'],
+                                ['bi-person-check', 'User Responsibilities', 'Use accurate information, communicate respectfully, honor accepted offers, avoid unsafe or illegal work, and do not use KAILA to harass, scam, spam, impersonate, or mislead others.'],
+                                ['bi-briefcase', 'Jobs, Offers, And Completion', 'Clients choose providers from submitted offers. Providers should state price, schedule, and scope clearly. Completion, revision, dispute, and rating flows must be used honestly.'],
+                                ['bi-map', 'Location, Navigation, And Contact', 'Users should pin accurate job or provider locations only when they are authorized to share them. Navigation, route distance, calls, and messages are coordination tools; users remain responsible for safe travel, lawful conduct, and verifying final job details.'],
+                                ['bi-shield-exclamation', 'Safety And Moderation', 'KAILA may review reports, block abusive behavior, restrict accounts, remove unsafe content, or preserve records needed to investigate disputes and protect users.'],
+                                ['bi-star', 'Ratings', 'Ratings should describe real job experiences. False, abusive, or retaliatory reviews may be investigated by support.'],
+                                ['bi-clipboard-check', 'Validation And Staff Use', 'Staff and admins must record validation surveys, provider interviews, support notes, and moderation actions accurately. They must not use KAILA data for unrelated personal purposes.'],
+                                ['bi-info-circle', 'Limitations', 'The pilot is provided as-is and may change as KAILA validates local marketplace operations. KAILA is not responsible for independent provider workmanship, pricing, or offline conduct, but support will help document and triage disputes.'],
+                                ['bi-person-gear', 'Account Changes', 'KAILA may suspend or remove accounts that violate these terms. Users may delete their account from Settings, subject to safety and operational record retention.'],
                             ],
                         ],
                         'support' => [
                             'label' => 'Contact Support',
-                            'eyebrow' => 'Support',
+                            'eyebrow' => 'Help desk',
                             'title' => 'Contact Support',
-                            'lede' => 'Need help with your account, a request, a provider, or a safety concern? KAILA support can help route the issue.',
+                            'lede' => 'Use the in-app support desk after login for the fastest response.',
+                            'heroIcon' => 'bi-headset',
                             'items' => [
-                                ['Account help', 'For login, registration, profile, or notification issues, include the email or phone number linked to your account.'],
-                                ['Job support', 'For active requests, include the service type, provider or client name, and a short description of what happened.'],
-                                ['Safety concerns', 'For urgent safety or fraud concerns, send the details as soon as possible and avoid sharing sensitive payment information in plain text.'],
+                                ['bi-question-circle', 'When To Contact Support', 'Contact support for account access, job coordination, unsafe behavior, reports, blocked users, disputes, ratings concerns, privacy questions, or provider/client guidance.'],
+                                ['bi-chat-dots', 'Inside The App', 'After login, open Customer Service from Quick actions or the Support tab to message an official KAILA support account.'],
+                                ['bi-card-checklist', 'What To Include', 'Include the job category, area, usernames involved, what happened, screenshots or media when useful, whether location/navigation was involved, and what outcome you need.'],
                             ],
-                            'action' => ['mailto:support@kaila-app.com', 'Email support@kaila-app.com'],
+                            'actions' => [
+                                ['/login', 'Login For Support', 'bi-box-arrow-in-right'],
+                                ['/privacy-policy', 'Privacy Policy', 'bi-shield-lock'],
+                            ],
                         ],
                     ];
                     $pageKey = trim(request()->path(), '/');
@@ -108,7 +126,7 @@
                             </a>
                             <nav class="landing-links" aria-label="Landing navigation">
                                 <a href="#how-it-works">How It Works</a>
-                                <a href="#for-providers">For Providers</a>
+                                <a href="/register?role=provider">For Providers</a>
                                 <a href="#support">Support</a>
                                 <a class="landing-login" href="/login">Login</a>
                             </nav>
@@ -221,26 +239,39 @@
                         </header>
 
                         <main class="legal-content">
-                            <a class="legal-back" href="/"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to KAILA</a>
-                            <p class="legal-eyebrow">{{ $legalPage['eyebrow'] }}</p>
-                            <h1>{{ $legalPage['title'] }}</h1>
-                            <p class="legal-lede">{{ $legalPage['lede'] }}</p>
+                            <a class="legal-back" href="/" data-history-back><i class="bi bi-arrow-left" aria-hidden="true"></i>Back</a>
+                            <div class="legal-hero-title">
+                                <span class="legal-hero-icon"><i class="bi {{ $legalPage['heroIcon'] }}" aria-hidden="true"></i></span>
+                                <div>
+                                    <p class="legal-eyebrow">{{ $legalPage['eyebrow'] }}</p>
+                                    <h1>{{ $legalPage['title'] }}</h1>
+                                    <p class="legal-lede">{{ $legalPage['lede'] }}</p>
+                                </div>
+                            </div>
 
                             <div class="legal-grid">
-                                @foreach ($legalPage['items'] as [$heading, $body])
+                                @foreach ($legalPage['items'] as [$icon, $heading, $body])
                                     <article>
-                                        <h2>{{ $heading }}</h2>
-                                        <p>{{ $body }}</p>
+                                        <span class="legal-card-icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></span>
+                                        <div>
+                                            <h2>{{ $heading }}</h2>
+                                            <p>{{ $body }}</p>
+                                        </div>
+                                        <i class="bi bi-chevron-right legal-card-arrow" aria-hidden="true"></i>
                                     </article>
                                 @endforeach
                             </div>
 
-                            @isset($legalPage['action'])
-                                <a class="landing-primary legal-action" href="{{ $legalPage['action'][0] }}">
-                                    <i class="bi bi-headset" aria-hidden="true"></i>
-                                    {{ $legalPage['action'][1] }}
-                                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                                </a>
+                            @isset($legalPage['actions'])
+                                <div class="legal-actions">
+                                    @foreach ($legalPage['actions'] as [$href, $label, $icon])
+                                        <a class="{{ $loop->first ? 'landing-primary' : 'landing-secondary' }} legal-action" href="{{ $href }}">
+                                            <i class="bi {{ $icon }}" aria-hidden="true"></i>
+                                            {{ $label }}
+                                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                        </a>
+                                    @endforeach
+                                </div>
                             @endisset
                         </main>
 
@@ -332,9 +363,9 @@
                     </footer>
                 </section>
                 @elseif (request()->is('register'))
-                <section class="client-register-page">
+                <section class="client-register-page {{ request('role') === 'provider' ? 'is-provider-register' : '' }}">
                     <header class="register-topbar">
-                        <a class="register-back mobile-only" href="/" aria-label="Back"><i class="bi bi-chevron-left"></i></a>
+                        <a class="register-back mobile-only" href="/" aria-label="Back" data-history-back><i class="bi bi-chevron-left"></i></a>
                         <a class="landing-logo" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
                         <div class="register-login desktop-only">
                             <span>Already have an account?</span>
@@ -358,21 +389,21 @@
                         <main class="register-panel">
                             <div class="register-heading">
                                 <a class="landing-logo mobile-only" href="/"><img src="/assets/brand/kaila-wordmark.png" alt="KAILA"></a>
-                                <h1>Create Account (Client)</h1>
-                                <p>Join KAILA and get things done.</p>
+                                <h1 data-register-title>Create Account (Client)</h1>
+                                <p data-register-subtitle>Join KAILA and get things done.</p>
                             </div>
 
-                            <form id="register-form" class="client-register-form" data-register-form data-step="1">
-                                <input type="hidden" name="role" value="client">
-                                <input type="hidden" name="category" value="General local service">
+                            <form id="register-form" class="client-register-form" data-register-form data-step="1" data-register-role="{{ request('role') === 'provider' ? 'provider' : 'client' }}">
+                                <input type="hidden" name="role" value="{{ request('role') === 'provider' ? 'provider' : 'client' }}">
+                                <input type="hidden" name="category" value="General local service" @disabled(request('role') === 'provider')>
 
-                                <div class="register-steps" aria-label="Registration progress">
+                                <div class="register-steps client-register-steps" aria-label="Registration progress" data-client-register>
                                     <span class="step is-active" data-step-indicator="1"><b>1</b>Account &amp; Contact</span>
                                     <i></i>
                                     <span class="step" data-step-indicator="2"><b>2</b>Location &amp; Consent</span>
                                 </div>
 
-                                <section class="register-section" data-step-section="1">
+                                <section class="register-section" data-step-section="1" data-client-register>
                                     <h2><i class="bi bi-person"></i>Account Details</h2>
                                     <div class="name-parts-grid">
                                         <div class="register-field"><i class="bi bi-person"></i><label>First name<input name="first_name" required autocomplete="given-name" placeholder="e.g. Juan"></label></div>
@@ -412,7 +443,7 @@
                                     </div>
                                 </section>
 
-                                <section class="register-section" data-step-section="2">
+                                <section class="register-section" data-step-section="2" data-client-register>
                                     <h2><i class="bi bi-geo-alt-fill"></i>Location</h2>
                                     <div class="register-field"><i class="bi bi-geo-alt"></i><label>Region<select name="region" data-address-region></select></label><i class="bi bi-chevron-down"></i></div>
                                     <div class="register-field"><i class="bi bi-shield-check"></i><label>Province<select name="province" data-address-province></select></label><i class="bi bi-chevron-down"></i></div>
@@ -432,6 +463,255 @@
                                     <label class="register-check"><input type="checkbox" name="terms_consent" value="1" required checked><span>I agree to KAILA's <a href="/terms">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.</span></label>
                                     <label class="register-check"><input type="checkbox" name="data_privacy_consent" value="1" required checked><span>I consent to the collection and processing of my personal data in accordance with the Privacy Act of 2012.</span></label>
                                     <div class="privacy-note"><i class="bi bi-lock"></i><p><b>Your privacy matters</b><br>We use your information only to provide and improve our services. We never sell your data.</p></div>
+                                </section>
+
+                                <section class="provider-register-shell" data-provider-register hidden>
+                                    <input type="hidden" name="category" value="Plumbing" disabled>
+                                    <input type="hidden" name="specific_services" value="Faucet Repair, Pipe Installation, Leak Detection, Drain Cleaning" disabled>
+                                    <input type="hidden" name="coverage_area" value="Makati City, Taguig, Pasig" disabled>
+                                    <input type="hidden" name="availability" value="Available" disabled>
+
+                                    <div class="provider-stepper" aria-label="Provider registration progress">
+                                        <span class="is-active"><b><i class="bi bi-person"></i></b>Profile</span>
+                                        <i></i>
+                                        <span><b><i class="bi bi-tools"></i></b>Services</span>
+                                        <i></i>
+                                        <span><b><i class="bi bi-calendar-check"></i></b>Availability</span>
+                                        <i></i>
+                                        <span><b><i class="bi bi-shield-check"></i></b>Verification</span>
+                                        <i></i>
+                                        <span><b><i class="bi bi-check-lg"></i></b>Agreements</span>
+                                    </div>
+
+                                    <div class="provider-register-layout">
+                                        <div class="provider-register-main">
+                                            <section class="provider-step-content" data-provider-step-section="1">
+                                            <div class="provider-page-title">
+                                                <h2>Create your provider account</h2>
+                                                <p>Tell us about yourself so clients can find and trust you.</p>
+                                            </div>
+
+                                            <div class="provider-form-card">
+                                                <h3>Personal Information</h3>
+                                                <div class="provider-grid">
+                                                    <div class="register-field"><i class="bi bi-person"></i><label>First name<input name="first_name" required autocomplete="given-name" placeholder="Juan" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-person"></i><label>Middle name <span>(optional)</span><input name="middle_name" autocomplete="additional-name" placeholder="Santos" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-person"></i><label>Last name<input name="last_name" required autocomplete="family-name" placeholder="Dela Cruz" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-person"></i><label>Suffix <span>(optional)</span><input name="suffix" autocomplete="honorific-suffix" placeholder="Jr." disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-envelope"></i><label>Email address<input name="email" type="email" autocomplete="email" placeholder="juan@email.com" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-person-circle"></i><label>Username<input name="username" required minlength="3" autocomplete="username" placeholder="e.g., juandelacruz_ph" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-telephone"></i><label>Contact number<input name="contact_number" inputmode="tel" required placeholder="+63 912 345 6789" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-lock"></i><label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Create a strong password" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-messenger"></i><label>Messenger / Social link <span>(optional)</span><input name="messenger_link" placeholder="m.me/juandecruz" disabled></label></div>
+                                                    <div class="register-field"><i class="bi bi-chat-left-dots"></i><label>Preferred contact channel<select name="preferred_contact_channel" required disabled><option value="">Select channel</option><option>Call</option><option>SMS</option><option>Messenger</option><option>Email</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                    <div class="register-field"><i class="bi bi-clock"></i><label>Best contact time<select name="best_contact_time" disabled><option value="">Select time</option><option>Weekdays, 9:00 AM - 6:00 PM</option><option>Weeknights, 6:00 PM - 9:00 PM</option><option>Weekends, 9:00 AM - 6:00 PM</option><option>Any time</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                    <div class="register-field"><i class="bi bi-geo-alt"></i><label>Address / Area<input name="area" required placeholder="Makati City, Metro Manila" disabled></label></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="provider-form-card">
+                                                <h3>Provider Details</h3>
+                                                <div class="provider-grid provider-details-grid">
+                                                    <div class="register-field"><i class="bi bi-person-badge"></i><label>Provider type<select name="provider_type" required disabled><option>Individual</option><option>Freelancer</option><option>Shop</option><option>Small team</option><option>Business</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                    <div class="register-field"><i class="bi bi-award"></i><label>Years of experience<select name="years_experience" required disabled><option>Less than 1 year</option><option>1-2 years</option><option selected>5+ years</option><option>10+ years</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                    <div class="register-field"><i class="bi bi-cash"></i><label>Minimum fee (PHP)<input name="minimum_fee" inputmode="numeric" placeholder="e.g., 500" disabled></label></div>
+                                                    <div class="provider-toggle-field">
+                                                        <span>Emergency availability</span>
+                                                        <small>Available for urgent / emergency jobs</small>
+                                                        <div class="provider-segment">
+                                                            <label><input type="radio" name="emergency_availability" value="Yes" checked disabled><span>Yes</span></label>
+                                                            <label><input type="radio" name="emergency_availability" value="No" disabled><span>No</span></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="register-field"><i class="bi bi-tag"></i><label>Price range (PHP)<select name="price_range" disabled><option>500 - 5,000</option><option>1,000 - 10,000</option><option>Custom quote</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                    <div class="provider-summary-note wide"><i class="bi bi-info-circle"></i><span>Services, coverage, schedule, and verification are collected in the next steps.</span></div>
+                                                </div>
+                                            </div>
+                                            </section>
+
+                                            <section class="provider-step-content" data-provider-step-section="2" hidden>
+                                                <a class="provider-back-link" href="#" data-provider-prev><i class="bi bi-chevron-left"></i>Back</a>
+                                                <div class="provider-page-title"><h2>Services</h2><p>Tell clients what services you offer.</p></div>
+                                                <div class="provider-form-card">
+                                                    <h3>1. Select your service categories</h3>
+                                                    <p class="provider-card-note">Choose all categories that match the services you provide.</p>
+                                                    <div class="provider-service-grid">
+                                                        <label class="provider-service-card is-selected"><input type="checkbox" checked><i class="bi bi-water"></i><span>Plumbing</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card is-selected"><input type="checkbox" checked><i class="bi bi-lightning-charge-fill"></i><span>Electrical</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card is-selected"><input type="checkbox" checked><i class="bi bi-bucket"></i><span>Cleaning</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card is-selected"><input type="checkbox" checked><i class="bi bi-tools"></i><span>Repair &amp; Handyman</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-paint-bucket"></i><span>Painting</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-hammer"></i><span>Carpentry</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-window"></i><span>Appliance Repair</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-truck"></i><span>Moving &amp; Hauling</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-bug"></i><span>Pest Control</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-snow"></i><span>Aircon Services</span><b><i class="bi bi-check"></i></b></label>
+                                                        <label class="provider-service-card"><input type="checkbox"><i class="bi bi-three-dots"></i><span>Other</span><b><i class="bi bi-check"></i></b></label>
+                                                    </div>
+                                                    <p class="provider-selected-count">Selected <b>4 categories</b></p>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3>2. Specify the services you offer</h3>
+                                                    <p class="provider-card-note">Add the specific services you can do.</p>
+                                                    <div class="provider-chip-input">
+                                                        <span>Faucet Repair <i class="bi bi-x"></i></span>
+                                                        <span>Pipe Installation <i class="bi bi-x"></i></span>
+                                                        <span>Leak Detection <i class="bi bi-x"></i></span>
+                                                        <span>Drain Cleaning <i class="bi bi-x"></i></span>
+                                                        <i class="bi bi-chevron-down"></i>
+                                                    </div>
+                                                    <button class="provider-link-button" type="button"><i class="bi bi-plus-lg"></i>Add another service</button>
+                                                    <div class="provider-tip"><i class="bi bi-lightbulb"></i>Tip: Be specific! Listing more services helps clients find you for more jobs.</div>
+                                                </div>
+                                            </section>
+
+                                            <section class="provider-step-content" data-provider-step-section="3" hidden>
+                                                <a class="provider-back-link" href="#" data-provider-prev><i class="bi bi-chevron-left"></i>Back</a>
+                                                <div class="provider-page-title"><h2>Availability</h2><p>Set your schedule so clients know when you're available.</p></div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-calendar3"></i>1. Available days</h3>
+                                                    <p class="provider-card-note">Choose the days you're available to work.</p>
+                                                    <div class="provider-day-grid">
+                                                        @foreach (['Mon','Tue','Wed','Thu','Fri','Sat'] as $day)
+                                                            <label class="provider-day is-selected"><input type="checkbox" checked><span>{{ $day }}</span><i class="bi bi-check-circle-fill"></i></label>
+                                                        @endforeach
+                                                        <label class="provider-day"><input type="checkbox"><span>Sun</span><i class="bi bi-circle"></i></label>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-clock"></i>2. Available time</h3>
+                                                    <p class="provider-card-note">Set your daily working hours.</p>
+                                                    <div class="provider-time-grid">
+                                                        <div class="register-field"><i class="bi bi-clock"></i><label>Start time<select><option>7:00 AM</option><option>8:00 AM</option><option>9:00 AM</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                        <div class="register-field"><i class="bi bi-clock"></i><label>End time<select><option>7:00 PM</option><option>6:00 PM</option><option>5:00 PM</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                        <div class="provider-hours-card"><i class="bi bi-clock"></i><b>12 hours per day</b><span>Total available time</span></div>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-person-check"></i>3. Availability options</h3>
+                                                    <div class="provider-option-row"><label class="provider-switch"><input type="checkbox" checked><span></span></label><div><b>Accept urgent / emergency jobs</b><p>Get more jobs by accepting urgent requests.</p></div><em>Recommended</em><strong>Higher visibility</strong></div>
+                                                    <div class="provider-option-row"><label class="provider-switch"><input type="checkbox"><span></span></label><div><b>Available on holidays</b><p>Turn on to get more job opportunities.</p></div><strong>More bookings</strong></div>
+                                                </div>
+                                                <div class="provider-two-column">
+                                                    <div class="provider-form-card">
+                                                        <h3><i class="bi bi-geo-alt"></i>4. Travel / Distance</h3>
+                                                        <p class="provider-card-note">Maximum distance you're willing to travel.</p>
+                                                        <div class="register-field"><i class="bi bi-car-front"></i><label><select disabled><option>Up to 10 km</option><option>Up to 20 km</option><option>Metro-wide</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                        <div class="provider-tip small"><i class="bi bi-shield-check"></i>You can update this anytime in your settings.</div>
+                                                    </div>
+                                                    <div class="provider-form-card">
+                                                        <h3><i class="bi bi-arrow-repeat"></i>5. Time flexibility (optional)</h3>
+                                                        <p class="provider-card-note">How flexible is your schedule?</p>
+                                                        <div class="provider-flex-grid">
+                                                            <button type="button">Strict<span>Fixed hours</span></button>
+                                                            <button type="button" class="is-selected">Somewhat flexible<span>Can adjust</span></button>
+                                                            <button type="button">Very flexible<span>Open anytime</span></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </section>
+
+                                            <section class="provider-step-content" data-provider-step-section="4" hidden>
+                                                <a class="provider-back-link" href="#" data-provider-prev><i class="bi bi-chevron-left"></i>Back</a>
+                                                <div class="provider-page-title"><h2>Verification</h2><p>Help clients trust you by verifying your identity and qualifications.</p></div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-shield-check"></i>1. Identity Verification (Optional but recommended)</h3>
+                                                    <p class="provider-card-note">Upload a valid government-issued ID. Your information is securely protected.</p>
+                                                    <div class="provider-upload-grid">
+                                                        <div class="register-field"><i class="bi bi-card-heading"></i><label>Select ID type<select><option>National ID</option><option>Driver's License</option><option>Passport</option></select></label><i class="bi bi-chevron-down"></i></div>
+                                                        <button class="provider-upload-tile" type="button"><i class="bi bi-upload"></i><b>Upload front photo</b><span>JPG, PNG or PDF (Max. 5MB)</span></button>
+                                                        <div class="provider-safe-card"><i class="bi bi-lock"></i><b>Your data is safe</b><span>We use bank-level encryption to protect your identity.</span></div>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-patch-check"></i>2. Certificates / Permits (If applicable)</h3>
+                                                    <p class="provider-card-note">Upload any certificates, licenses, or permits that prove your skills.</p>
+                                                    <div class="provider-upload-grid certificates">
+                                                        <button class="provider-upload-tile" type="button"><i class="bi bi-upload"></i><b>Upload file or add link</b><span>JPG, PNG, PDF or Link (Max. 10MB)</span></button>
+                                                        <div class="provider-file-list">
+                                                            <b>Uploaded files (2)</b>
+                                                            <span><i class="bi bi-filetype-pdf"></i>TESDA NC II - Plumbing.pdf<em>1.2 MB</em><button type="button"><i class="bi bi-trash"></i></button></span>
+                                                            <span><i class="bi bi-file-earmark-image"></i>City Business Permit 2024.jpg<em>1.8 MB</em><button type="button"><i class="bi bi-trash"></i></button></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-images"></i>3. Work Sample (Show your best work)</h3>
+                                                    <p class="provider-card-note">Add photos, videos, or links to your previous projects.</p>
+                                                    <div class="provider-sample-grid">
+                                                        <div><img src="/assets/landing/hero-desktop.png" alt=""><button type="button"><i class="bi bi-x"></i></button></div>
+                                                        <div><img src="/assets/landing/phone-mock.png" alt=""><button type="button"><i class="bi bi-x"></i></button></div>
+                                                        <div><img src="/assets/login/login-local-road.png" alt=""><button type="button"><i class="bi bi-x"></i></button></div>
+                                                        <button type="button"><i class="bi bi-plus-circle"></i><b>Add more</b><span>Photos / Videos</span></button>
+                                                    </div>
+                                                    <div class="register-field wide"><i class="bi bi-link-45deg"></i><label>Portfolio link <span>(optional)</span><input name="portfolio_link" placeholder="https://yourportfolio.com"></label></div>
+                                                    <p class="provider-card-note">Add a link to your online portfolio or social media page.</p>
+                                                </div>
+                                            </section>
+
+                                            <section class="provider-step-content" data-provider-step-section="5" hidden>
+                                                <a class="provider-back-link" href="#" data-provider-prev><i class="bi bi-chevron-left"></i>Back</a>
+                                                <div class="provider-page-title"><h2>Agreements</h2><p>Review and agree to our terms to complete your provider registration.</p></div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-clipboard-check"></i>1. Consents</h3>
+                                                    <p class="provider-card-note">Help us personalize your experience and keep your information secure.</p>
+                                                    <div class="provider-agreement-list">
+                                                        <label><input type="checkbox" checked><i class="bi bi-briefcase"></i><span><b>I consent to receive job requests</b>Allow KAILA to send me job opportunities that match my profile, services, and availability.</span></label>
+                                                        <label><input type="checkbox" checked><i class="bi bi-star"></i><span><b>I agree to receive ratings and reviews</b>Allow clients to rate and review my work. This helps build trust in the community.</span></label>
+                                                        <label><input type="checkbox" name="data_privacy_consent" value="1" checked disabled><i class="bi bi-lock"></i><span><b>I agree to KAILA's Data Privacy Policy</b>Your data is handled securely and will never be shared without your permission.</span><a href="/privacy-policy">View policy <i class="bi bi-box-arrow-up-right"></i></a></label>
+                                                        <label><input type="checkbox" checked><i class="bi bi-bell"></i><span><b>I agree to receive important updates</b>Get notified about bookings, payments, promotions, and platform updates.</span></label>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-form-card">
+                                                    <h3><i class="bi bi-journal-check"></i>2. Agreements</h3>
+                                                    <p class="provider-card-note">Please read and agree to the following before you join.</p>
+                                                    <div class="provider-agreement-list compact">
+                                                        <label><input type="checkbox" name="rules_agreement" value="1" checked disabled><i class="bi bi-file-earmark-text"></i><span><b>I have read and agree to the Provider Terms &amp; Conditions</b>These terms outline your rights and responsibilities as a KAILA provider.</span><a href="/terms">Read terms <i class="bi bi-box-arrow-up-right"></i></a></label>
+                                                        <label><input type="checkbox" checked><i class="bi bi-file-earmark-text"></i><span><b>I agree to follow the KAILA Community Guidelines</b>Be respectful, professional, and deliver quality service to clients.</span><a href="/terms">Read guidelines <i class="bi bi-box-arrow-up-right"></i></a></label>
+                                                        <label><input type="checkbox" checked><i class="bi bi-file-earmark-text"></i><span><b>I agree to the KAILA Fees and Payments Policy</b>Understand how our fees, payouts, and payment protection work.</span><a href="/terms">Read policy <i class="bi bi-box-arrow-up-right"></i></a></label>
+                                                    </div>
+                                                    <div class="provider-ready"><i class="bi bi-shield-check"></i><p><b>You're almost ready!</b><br>By continuing, you confirm that all information provided is accurate and complete.</p></div>
+                                                </div>
+                                            </section>
+                                        </div>
+
+                                        <aside class="provider-preview-panel">
+                                            <div class="provider-preview-card">
+                                                <h3>Your provider preview</h3>
+                                                <p>This is how clients will see you.</p>
+                                                <div class="preview-profile">
+                                                    <img src="/assets/registration/client-registration-illustration.png" alt="">
+                                                    <div>
+                                                        <b data-provider-preview-name>Juan Dela Cruz</b>
+                                                        <span>Top Pro</span>
+                                                        <small><i class="bi bi-star-fill"></i> 4.9 (128 reviews)</small>
+                                                        <small><i class="bi bi-geo-alt"></i> Makati City, Metro Manila</small>
+                                                        <small><i class="bi bi-briefcase"></i> 5+ years experience</small>
+                                                    </div>
+                                                    <button type="button"><i class="bi bi-pencil"></i>Edit</button>
+                                                </div>
+                                                <div class="preview-services">
+                                                    <strong>Services</strong><a href="#">View all <i class="bi bi-chevron-right"></i></a>
+                                                    <span>Plumbing</span><span>Electrical</span><span>Repair</span><span>+2</span>
+                                                </div>
+                                                <dl>
+                                                    <div><dt><i class="bi bi-stopwatch"></i>Response time</dt><dd>Usually within 30 mins</dd></div>
+                                                    <div><dt><i class="bi bi-chat-dots"></i>Preferred contact</dt><dd>Messenger</dd></div>
+                                                    <div><dt><i class="bi bi-calendar-check"></i>Availability</dt><dd>Mon - Sun, 7:00 AM - 7:00 PM</dd></div>
+                                                    <div><dt><i class="bi bi-geo-alt"></i>Coverage area</dt><dd>Makati City, Taguig, Pasig +2 more</dd></div>
+                                                    <div><dt><i class="bi bi-cash-coin"></i>Starting price</dt><dd>From PHP 500</dd></div>
+                                                </dl>
+                                            </div>
+                                            <div class="provider-trust-copy">
+                                                <h3><i class="bi bi-shield-check"></i>Why we ask for these details</h3>
+                                                <p>This helps clients feel confident that you're qualified, reachable, and ready to help.</p>
+                                                <span><i class="bi bi-patch-check"></i>Verified providers get more jobs</span>
+                                                <span><i class="bi bi-heart"></i>Higher trust = more confirmed bookings</span>
+                                                <span><i class="bi bi-lock"></i>Your data is safe with us</span>
+                                            </div>
+                                        </aside>
+                                    </div>
+
                                 </section>
 
                                 <div class="register-submitbar">

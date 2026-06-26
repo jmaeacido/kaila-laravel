@@ -6,6 +6,7 @@ import {
     matchingRequests,
     passRequest,
     providerActiveJobs,
+    canStartNavigation,
     providerMetrics,
     providerOffersSent,
     refreshState,
@@ -27,10 +28,16 @@ import {
 import { attachmentsFromForm, renderAttachments } from "./kaila-media.js";
 import {
     assistantScreen,
+    activityScreen,
     bindAssistantActions,
     bindFeedActions,
+    bindNotificationActions,
+    bindSupportHubActions,
+    callScreen,
     feedScreen,
+    marketplaceSupportScreen,
 } from "./kaila-shared-screens.js";
+import { bindCallActions } from "./kaila-webrtc.js";
 import {
     mockInboxShell,
     mockPageHero,
@@ -70,6 +77,7 @@ const navItems = [
     ["send-offer", "Send Offer", "fa-tag", "/requests#send-offer"],
     ["job-detail", "Accepted Job", "fa-clipboard-check", "/jobs#detail"],
     ["chat", "Job Chat", "fa-comments", "/messages#chat"],
+    ["call", "Call", "fa-video", "/messages#call"],
     ["travel", "Travel", "fa-location-dot", "/jobs#travel"],
     ["mark-done", "Mark Done", "fa-circle-check", "/jobs#mark-done"],
     ["support", "Support", "fa-headset", "/support"],
@@ -191,7 +199,7 @@ const screens = {
                 ${job.status === "Accepted" || job.status === "Revision Requested" ? `<button class="btn btn-primary btn-sm" type="button" data-job-action="start">Start job</button>` : ""}
                 ${job.status === "In Progress" || job.status === "Revision Requested" ? `<button class="btn btn-outline-primary btn-sm" type="button" data-view-link="mark-done">Mark done</button>` : ""}
                 <button class="btn btn-outline-primary btn-sm" type="button" data-view-link="chat">Message</button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-nav-start="${job.id}">Start navigation</button>
+                ${canStartNavigation(job) ? `<button class="btn btn-outline-primary btn-sm" type="button" data-nav-start="${job.id}">Start navigation</button>` : ""}
             </div>` : `<p class="mock-empty">Select a job.</p>`);
     },
     chat() {
@@ -203,22 +211,37 @@ const screens = {
             activeTitle: job?.client?.name || "Client",
             activeSub: job ? requestTitle(job) : "Job conversations",
             composeAttr: "data-provider-chat",
+            supportCount: store.supportDesk ? 1 : 0,
+            callPeerId: job?.client_id || job?.client?.id || null,
+            callRequestId: job?.id || "",
+        });
+    },
+    call() {
+        const job = currentJob();
+        const client = job?.client;
+        return callScreen({
+            peerName: client?.name || "Client",
+            peerPhoto: client?.social_photo_url || "",
+            subtitle: client ? "Start a voice or video call from job chat." : "Select a job conversation first.",
         });
     },
     inbox() { return screens.chat(); },
     travel() {
         const job = currentJob();
         const nav = job?.navigation_state;
+        const canNavigate = canStartNavigation(job);
+        const navActive = nav?.status === "traveling";
         return card(`
             <div class="kaila-route-panel">
                 <div class="kaila-route-summary">
                     <div>
                         <h3 class="mb-1">Travel / Navigation</h3>
-                        <p class="text-muted mb-0">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km` : "Navigation not started"} · ETA ${nav?.eta_minutes || "—"} min</p>
+                        <p class="text-muted mb-0">${nav?.distance_meters ? `${Math.round(nav.distance_meters / 100) / 10} km` : canNavigate ? "Ready to start travel to the job site." : "Navigation unavailable for this job status."} · ETA ${nav?.eta_minutes || "—"} min</p>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-primary" type="button" data-provider-location-update="${job?.id || ""}"><i class="fa-solid fa-location-crosshairs"></i> Share current location</button>
-                        <button class="btn btn-outline-danger" type="button" data-provider-stop-navigation="${job?.id || ""}"><i class="fa-solid fa-stop"></i> Stop</button>
+                        ${canNavigate && !navActive ? `<button class="btn btn-primary" type="button" data-nav-start="${job?.id || ""}"><i class="fa-solid fa-location-arrow"></i> Start navigation</button>` : ""}
+                        ${navActive ? `<button class="btn btn-primary" type="button" data-provider-location-update="${job?.id || ""}"><i class="fa-solid fa-location-crosshairs"></i> Share current location</button>` : ""}
+                        ${navActive ? `<button class="btn btn-outline-danger" type="button" data-provider-stop-navigation="${job?.id || ""}"><i class="fa-solid fa-stop"></i> Stop</button>` : ""}
                     </div>
                 </div>
                 <div class="kaila-route-map" data-provider-route-map></div>
@@ -233,25 +256,13 @@ const screens = {
             </form>`);
     },
     support() {
-        const messages = store.directMessages;
-        return card(`
-            <div class="mock-chat-panel__messages mb-3">${messages.map((message) => `<div class="mock-chat-bubble ${message.sender_id === store.user?.id ? "out" : "in"}">${escapeHtml(message.body)}${renderAttachments(message.attachments)}</div>`).join("") || `<p class="mock-empty">Message KAILA Customer Service for help.</p>`}</div>
-            <form data-provider-support class="mock-chat-compose">
-                <input class="form-control" name="body" required placeholder="Message KAILA Customer Service">
-                <button class="mock-send-btn" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
-            </form>`);
+        return marketplaceSupportScreen({
+            composeAttr: "data-provider-support",
+            activePanel: "chat",
+        });
     },
     notifications() {
-        const items = store.notifications || [];
-        return `
-            ${mockPageHero("Activity", subtitles.notifications)}
-            ${card(items.length ? items.map((item) => `
-                <div class="mock-home-request">
-                    <span class="mock-home-request__body">
-                        <strong>${escapeHtml(item.title || item.type)}</strong>
-                        <small>${escapeHtml(item.body || "")}</small>
-                    </span>
-                </div>`).join("") : `<p class="mock-empty">No activity yet.</p>`)}`;
+        return activityScreen({ title: "Activity", subtitle: subtitles.notifications });
     },
     settings() {
         const profile = store.user?.provider_profile || {};
@@ -322,6 +333,9 @@ export function initProviderApp() {
 function bindProviderScreenActions({ navigate, toast: showToast }) {
     bindFeedActions({ toast: showToast });
     bindAssistantActions({ toast: showToast });
+    bindSupportHubActions({ navigate, toast: showToast });
+    bindNotificationActions({ navigate, toast: showToast, selectRequestAction: selectRequest });
+    bindCallActions({ navigate, toast: showToast });
 
     document.querySelectorAll("[data-pass-request]").forEach((button) => {
         button.addEventListener("click", async () => {
@@ -414,8 +428,14 @@ function bindProviderScreenActions({ navigate, toast: showToast }) {
 
     document.querySelectorAll("[data-nav-start]").forEach((button) => {
         button.addEventListener("click", async () => {
+            const requestId = button.dataset.navStart;
+            const job = store.requests.find((item) => String(item.id) === String(requestId));
+            if (!canStartNavigation(job)) {
+                showToast(`Navigation is unavailable while the job is ${job?.status || "not active"}.`);
+                return;
+            }
             try {
-                await startNavigation(button.dataset.navStart);
+                await startNavigation(requestId);
                 showToast("Navigation started.");
                 navigate("travel");
             } catch (error) {

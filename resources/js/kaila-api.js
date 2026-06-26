@@ -9,6 +9,8 @@ export const store = {
     providers: [],
     notifications: [],
     unreadNotifications: 0,
+    unreadMessages: 0,
+    badgeCounts: {},
     supportDesk: null,
     supportPeerId: null,
     support: {
@@ -25,10 +27,14 @@ export const store = {
     jobMessages: [],
     directMessages: [],
     feedPosts: [],
+    feedLoaded: false,
+    feedFilter: null,
+    feedExpandedComments: [],
     assistantMessages: [],
     assistantSuggestions: [],
     analyticsInsight: null,
     incomingCall: null,
+    callSession: null,
     admin: {
         users: [],
         reports: [],
@@ -85,6 +91,8 @@ export async function refreshState() {
         store.providers = payload.providers || [];
         store.notifications = payload.notifications || [];
         store.unreadNotifications = payload.unreadNotifications || 0;
+        store.unreadMessages = payload.unreadMessages || 0;
+        store.badgeCounts = payload.badgeCounts || {};
         store.supportDesk = payload.supportDesk || null;
         store.support = payload.support || { queue: [], threads: [], activities: [], permissions: {} };
         store.admin = payload.admin || { users: [], reports: [], validationEntries: [], auditLogs: [], permissions: {} };
@@ -133,6 +141,12 @@ export function providerActiveJobs() {
         item.accepted_provider_id === userId
         && !["Cancelled", "Rated / Closed", "Closed", "Payment Released"].includes(item.status)
     );
+}
+
+export const NAVIGATION_STATUSES = ["Accepted", "In Progress", "Revision Requested"];
+
+export function canStartNavigation(request) {
+    return NAVIGATION_STATUSES.includes(request?.status);
 }
 
 export function providerOffersSent() {
@@ -241,6 +255,7 @@ export async function jobAction(requestId, action, extra = {}) {
 export async function loadJobMessages(requestId) {
     const payload = await api(`/api/requests/${requestId}/messages`);
     store.jobMessages = payload.messages || [];
+    await markMessageThreadRead("job", String(requestId));
     emitChange();
     return store.jobMessages;
 }
@@ -266,6 +281,7 @@ export async function sendDirectMessage(userId, body, attachments = []) {
 export async function loadDirectMessages(userId) {
     const payload = await api(`/api/direct-conversations/${userId}/messages`);
     store.directMessages = payload.messages || [];
+    await markMessageThreadRead("direct", String(userId));
     emitChange();
     return store.directMessages;
 }
@@ -273,8 +289,78 @@ export async function loadDirectMessages(userId) {
 export async function loadFeed() {
     const payload = await api("/api/feed");
     store.feedPosts = payload.feed || [];
+    store.feedLoaded = true;
     emitChange();
     return store.feedPosts;
+}
+
+const DEFAULT_FEED_FILTER = {
+    search: "",
+    role: "all",
+    sort: "newest",
+    topicLabel: "",
+    keywords: [],
+};
+
+export function getFeedFilter() {
+    return store.feedFilter ? { ...DEFAULT_FEED_FILTER, ...store.feedFilter } : { ...DEFAULT_FEED_FILTER };
+}
+
+function feedFilterIsActive(filter) {
+    return Boolean(
+        filter.search?.trim()
+        || (filter.role && filter.role !== "all")
+        || (filter.sort && filter.sort !== "newest")
+        || (filter.keywords && filter.keywords.length)
+    );
+}
+
+export function feedFilterSummary(filter = getFeedFilter()) {
+    if (!store.feedFilter) return "";
+    const parts = [];
+    if (filter.topicLabel) parts.push(filter.topicLabel);
+    if (filter.search?.trim()) parts.push(`Search: "${filter.search.trim()}"`);
+    if (filter.role === "client") parts.push("Clients");
+    if (filter.role === "provider") parts.push("Providers");
+    if (filter.sort === "liked") parts.push("Most liked");
+    if (filter.sort === "commented") parts.push("Most commented");
+    return parts.join(" · ");
+}
+
+export function patchFeedFilter(patch) {
+    const next = { ...getFeedFilter(), ...patch };
+    store.feedFilter = feedFilterIsActive(next) ? next : null;
+    emitChange();
+}
+
+export function setFeedFilter(label, keywords = []) {
+    const current = getFeedFilter();
+    if (current.topicLabel === label) {
+        patchFeedFilter({ topicLabel: "", keywords: [] });
+        return;
+    }
+    patchFeedFilter({ topicLabel: label, keywords });
+}
+
+export function clearFeedFilter() {
+    store.feedFilter = null;
+    emitChange();
+}
+
+export function toggleFeedComments(postId) {
+    const id = String(postId);
+    const expanded = new Set(store.feedExpandedComments || []);
+    if (expanded.has(id)) {
+        expanded.delete(id);
+    } else {
+        expanded.add(id);
+    }
+    store.feedExpandedComments = [...expanded];
+    emitChange();
+}
+
+export function isFeedCommentsExpanded(postId) {
+    return (store.feedExpandedComments || []).includes(String(postId));
 }
 
 export async function createFeedPost(body, attachments = []) {
@@ -287,11 +373,19 @@ export async function createFeedPost(body, attachments = []) {
 }
 
 export async function feedReaction(postId, reaction) {
-    return api(`/api/feed/${postId}/reactions`, { method: "POST", body: { reaction } });
+    const payload = await api(`/api/feed/${postId}/reactions`, { method: "POST", body: { reaction } });
+    await loadFeed();
+    return payload;
+}
+
+export async function feedShare(postId) {
+    return api(`/api/feed/${postId}/share`, { method: "POST", body: {} });
 }
 
 export async function feedComment(postId, body) {
-    return api(`/api/feed/${postId}/comments`, { method: "POST", body: { body } });
+    const payload = await api(`/api/feed/${postId}/comments`, { method: "POST", body: { body } });
+    await loadFeed();
+    return payload;
 }
 
 export async function updateFeedPost(postId, body) {
@@ -490,6 +584,7 @@ export async function reportUser(userId, reason, details) {
 
 export async function blockUser(userId, reason = "") {
     await api(`/api/blocks/${userId}`, { method: "POST", body: { reason } });
+    await refreshState();
 }
 
 export async function deleteAccount(confirm) {
@@ -500,9 +595,104 @@ export async function deleteAccount(confirm) {
     window.location.assign("/login");
 }
 
-export async function markNotificationsRead() {
-    await api("/api/notifications/read", { method: "POST", body: {} });
-    await refreshState();
+export async function markNotificationsRead(ids = null) {
+    const body = ids ? { ids: Array.isArray(ids) ? ids : [ids] } : {};
+    const payload = await api("/api/notifications/read", { method: "POST", body });
+    applyNotificationReadPatch(ids, payload.unreadNotifications);
+    return payload;
+}
+
+function applyNotificationReadPatch(ids, unreadCount) {
+    const markAll = ids === null;
+    const idSet = markAll ? null : new Set((Array.isArray(ids) ? ids : [ids]).map(String));
+    const now = new Date().toISOString();
+
+    store.notifications = (store.notifications || []).map((item) => {
+        if (markAll || idSet.has(String(item.id))) {
+            return { ...item, read_at: item.read_at || now };
+        }
+        return item;
+    });
+
+    store.unreadNotifications = typeof unreadCount === "number"
+        ? unreadCount
+        : store.notifications.filter((item) => !item.read_at).length;
+    emitChange();
+}
+
+export function notificationTarget(notification, role = store.user?.role) {
+    const data = notification?.data && typeof notification.data === "object" ? notification.data : {};
+    const requestId = notification?.service_request_id || data.requestId || null;
+    const type = String(notification?.type || "");
+
+    if (type === "report.opened") {
+        if (role === "customer_service" || role === "admin") {
+            return { view: "reports" };
+        }
+        return { view: "support" };
+    }
+
+    if (type === "offer.received") {
+        return { view: "offers", requestId };
+    }
+
+    if (type === "job.posted") {
+        return { view: role === "provider" ? "detail" : "requests", requestId };
+    }
+
+    if (type.startsWith("message.")) {
+        return { view: "chat", requestId };
+    }
+
+    if (type.startsWith("job.") || type.includes("status") || type.includes("Payment")) {
+        const view = role === "provider" ? "job-detail" : "detail";
+        return { view: requestId ? view : (role === "provider" ? "jobs" : "requests"), requestId };
+    }
+
+    if (requestId) {
+        return { view: role === "provider" ? "job-detail" : "detail", requestId };
+    }
+
+    return { view: "home" };
+}
+
+export async function markMessageThreadRead(scope, threadId) {
+    const payload = await api("/api/message-read", {
+        method: "POST",
+        body: { scope, threadId },
+    });
+
+    if (typeof payload.unreadMessages === "number") {
+        store.unreadMessages = payload.unreadMessages;
+        store.badgeCounts = { ...store.badgeCounts, unreadMessages: payload.unreadMessages };
+        emitChange();
+    }
+
+    return payload;
+}
+
+export function formatCountBadge(count = 0) {
+    const value = Number(count) || 0;
+    if (value <= 0) return "";
+    return value > 99 ? "99+" : String(value);
+}
+
+export function navBadgeFor(viewId) {
+    const counts = store.badgeCounts || {};
+    const map = {
+        inbox: store.unreadMessages,
+        notifications: store.unreadNotifications,
+        activity: store.unreadNotifications,
+        requests: counts.requestsOpen ?? counts.matchingRequests,
+        jobs: counts.activeJobs ?? counts.disputes,
+        queue: counts.supportQueue,
+        reports: counts.openReports,
+        disputes: counts.supportDisputes ?? counts.disputes,
+        validation: counts.validationEntries,
+        offers: counts.pendingOffers ?? counts.offersSent,
+    };
+
+    return formatCountBadge(map[viewId]);
 }
 
 export async function startNavigation(requestId) {

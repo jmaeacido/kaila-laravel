@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Carbon;
+use App\Services\KailaAssistantGuide;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -159,6 +160,8 @@ class MarketplaceController extends Controller
             'feed' => FeedPost::query()->with('author:id,name,username,role')->where('visibility', 'public')->latest()->limit(20)->get(),
             'notifications' => $user->notifications()->latest()->limit(30)->get(),
             'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
+            'unreadMessages' => $this->stateBuilder->unreadMessageCount($user),
+            'badgeCounts' => $this->stateBuilder->badgeCounts($user),
             'supportDesk' => $this->stateBuilder->supportDesk(),
             'support' => $supportPayload,
             'admin' => $user->isStaff() ? [
@@ -693,7 +696,10 @@ class MarketplaceController extends Controller
             'thread_id' => $data['threadId'] ?? '*',
         ], ['read_at' => isset($data['readAt']) ? Carbon::parse($data['readAt']) : now()]);
 
-        return response()->json(['ok' => true]);
+        return response()->json([
+            'ok' => true,
+            'unreadMessages' => $this->stateBuilder->unreadMessageCount($request->user()),
+        ]);
     }
 
     public function notificationSummary(Request $request)
@@ -819,12 +825,26 @@ class MarketplaceController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function feedIndex()
+    public function feedIndex(Request $request)
     {
-        $posts = FeedPost::query()->with('author:id,name,username,role')->where('visibility', 'public')->latest()->limit(50)->get();
+        $viewer = $request->user();
+        $posts = FeedPost::query()->with('author:id,name,username,role,social_photo_url')->where('visibility', 'public')->latest()->limit(50)->get();
         $mediaByPost = DB::table('feed_post_media')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
         $reactions = DB::table('feed_post_reactions')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
-        $comments = DB::table('feed_post_comments')->whereIn('feed_post_id', $posts->pluck('id'))->get()->groupBy('feed_post_id');
+        $comments = DB::table('feed_post_comments')
+            ->leftJoin('users', 'users.id', '=', 'feed_post_comments.user_id')
+            ->whereIn('feed_post_id', $posts->pluck('id'))
+            ->orderBy('feed_post_comments.created_at')
+            ->get([
+                'feed_post_comments.id',
+                'feed_post_comments.feed_post_id',
+                'feed_post_comments.user_id',
+                'feed_post_comments.body',
+                'feed_post_comments.created_at',
+                'users.name as author_name',
+                'users.username as author_username',
+            ])
+            ->groupBy('feed_post_id');
 
         return response()->json([
             'feed' => $posts->map(fn (FeedPost $post) => $this->mapFeedPost(
@@ -837,6 +857,7 @@ class MarketplaceController extends Controller
                 ])->values()->all(),
                 $reactions[$post->id] ?? collect(),
                 $comments[$post->id] ?? collect(),
+                $viewer,
             )),
         ]);
     }
@@ -857,7 +878,7 @@ class MarketplaceController extends Controller
             ? $this->media->attachToFeedPost($post->id, $data['attachments'])
             : [];
 
-        $payload = $this->mapFeedPost($post->load('author:id,name,username,role'), $media);
+        $payload = $this->mapFeedPost($post->load('author:id,name,username,role,social_photo_url'), $media, collect(), collect(), $request->user());
         $this->realtime->emit('kaila.feed.updated', ['post' => $payload]);
 
         return response()->json(['post' => $payload], 201);
@@ -876,6 +897,7 @@ class MarketplaceController extends Controller
     {
         abort_unless($feedPost->author_id === $request->user()->id || $request->user()->isStaff(), 403);
         $feedPost->delete();
+        $this->realtime->emit('kaila.feed.updated', ['postId' => $feedPost->id]);
 
         return response()->json(['ok' => true]);
     }
@@ -900,13 +922,33 @@ class MarketplaceController extends Controller
             'reaction' => ['required', Rule::in(['like', 'helpful', 'interested'])],
         ]);
 
+        $existing = DB::table('feed_post_reactions')
+            ->where('feed_post_id', $feedPost->id)
+            ->where('user_id', $request->user()->id)
+            ->where('reaction', $data['reaction'])
+            ->first();
+
+        if ($existing) {
+            DB::table('feed_post_reactions')
+                ->where('feed_post_id', $feedPost->id)
+                ->where('user_id', $request->user()->id)
+                ->where('reaction', $data['reaction'])
+                ->delete();
+
+            $this->realtime->emit('kaila.feed.updated', ['postId' => $feedPost->id]);
+
+            return response()->json(['ok' => true, 'active' => false]);
+        }
+
         DB::table('feed_post_reactions')->updateOrInsert([
             'feed_post_id' => $feedPost->id,
             'user_id' => $request->user()->id,
             'reaction' => $data['reaction'],
         ], ['created_at' => now()]);
 
-        return response()->json(['ok' => true]);
+        $this->realtime->emit('kaila.feed.updated', ['postId' => $feedPost->id]);
+
+        return response()->json(['ok' => true, 'active' => true]);
     }
 
     public function feedComment(Request $request, FeedPost $feedPost)
@@ -925,13 +967,18 @@ class MarketplaceController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->realtime->emit('kaila.feed.updated', ['postId' => $feedPost->id]);
+
         return response()->json(['comment' => DB::table('feed_post_comments')->find($id)], 201);
     }
 
     public function markNotifications(Request $request)
     {
         $ids = $request->input('ids');
-        $query = $request->user()->notifications()->whereNull('read_at');
+        $userId = $request->user()->id;
+        $query = KailaNotification::query()
+            ->where('user_id', $userId)
+            ->whereNull('read_at');
 
         if (is_array($ids) && count($ids)) {
             $query->whereIn('id', $ids);
@@ -939,7 +986,13 @@ class MarketplaceController extends Controller
 
         $query->update(['read_at' => now()]);
 
-        return response()->json(['ok' => true]);
+        return response()->json([
+            'ok' => true,
+            'unreadNotifications' => KailaNotification::query()
+                ->where('user_id', $userId)
+                ->whereNull('read_at')
+                ->count(),
+        ]);
     }
 
     public function pushSubscribe(Request $request)
@@ -1186,11 +1239,10 @@ class MarketplaceController extends Controller
 
         abort_unless(($messages[count($messages) - 1]['role'] ?? '') === 'user', 422, 'Ask Katabang a question first.');
 
-        $context = [
-            'role' => $request->user()->role,
-            'area' => $request->user()->area,
+        $context = KailaAssistantGuide::contextFor($request->user(), [
             'openRequests' => ServiceRequest::query()->where('client_id', $request->user()->id)->count(),
-        ];
+            'user' => $request->user(),
+        ]);
         $response = $this->groq->assistantAnswer($context, $messages);
 
         return response()->json([
@@ -1468,17 +1520,38 @@ class MarketplaceController extends Controller
         ];
     }
 
-    private function mapFeedPost(FeedPost $post, array $media = [], $reactions = null, $comments = null): array
+    private function mapFeedPost(FeedPost $post, array $media = [], $reactions = null, $comments = null, ?User $viewer = null): array
     {
+        $reactionCollection = collect($reactions);
+        $commentCollection = collect($comments);
+
         return [
             'id' => $post->id,
+            'author_id' => $post->author_id,
             'body' => $post->body,
             'shareCount' => $post->share_count,
             'created_at' => $post->created_at,
             'author' => $post->author,
             'media' => $media,
-            'reactions' => collect($reactions)->count(),
-            'comments' => collect($comments)->count(),
+            'reactions' => $reactionCollection->count(),
+            'reactionCounts' => [
+                'like' => $reactionCollection->where('reaction', 'like')->count(),
+                'helpful' => $reactionCollection->where('reaction', 'helpful')->count(),
+                'interested' => $reactionCollection->where('reaction', 'interested')->count(),
+            ],
+            'viewerReactions' => $viewer
+                ? $reactionCollection->where('user_id', $viewer->id)->pluck('reaction')->values()->all()
+                : [],
+            'comments' => $commentCollection->count(),
+            'commentList' => $commentCollection->map(fn ($comment) => [
+                'id' => $comment->id,
+                'body' => $comment->body,
+                'created_at' => $comment->created_at,
+                'author' => [
+                    'name' => $comment->author_name,
+                    'username' => $comment->author_username,
+                ],
+            ])->values()->all(),
         ];
     }
 }

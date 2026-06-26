@@ -72,20 +72,20 @@ export function mockStatCard(fa, value, label, trend, tone = "blue") {
         </div>`;
 }
 
-export function clientStatRow(stats) {
+export function clientStatRow(stats = {}) {
     const dashboardStats = {
-        postedRequests: 12,
-        activeJobs: 3,
-        offersReceived: 18,
-        completedJobs: 9,
-        averageRating: "4.8",
+        postedRequests: stats.postedRequests ?? 0,
+        activeJobs: stats.activeJobs ?? 0,
+        offersReceived: stats.offersReceived ?? 0,
+        completedJobs: stats.completedJobs ?? 0,
+        averageRating: stats.averageRating ?? "—",
     };
     return `<div class="mock-stat-grid">
-        ${mockStatCard("fa-file-lines", dashboardStats.postedRequests, "Posted Requests", "↗ 2 from last week", "blue")}
-        ${mockStatCard("fa-briefcase", dashboardStats.activeJobs, "Active Jobs", "→ Same as last week", "orange")}
-        ${mockStatCard("fa-user-group", dashboardStats.offersReceived, "Offers Received", "↗ 4 from last week", "cyan")}
-        ${mockStatCard("fa-check", dashboardStats.completedJobs, "Completed Jobs", "↗ 3 from last week", "green")}
-        ${mockStatCard("fa-star", dashboardStats.averageRating || "4.8", "Avg. Rating", "↗ 0.2 from last week", "purple")}
+        ${mockStatCard("fa-file-lines", dashboardStats.postedRequests, "Posted Requests", dashboardStats.postedRequests ? "Live" : "", "blue")}
+        ${mockStatCard("fa-briefcase", dashboardStats.activeJobs, "Active Jobs", dashboardStats.activeJobs ? "In progress" : "", "orange")}
+        ${mockStatCard("fa-user-group", dashboardStats.offersReceived, "Offers Received", dashboardStats.offersReceived ? "Pending review" : "", "cyan")}
+        ${mockStatCard("fa-check", dashboardStats.completedJobs, "Completed Jobs", dashboardStats.completedJobs ? "All time" : "", "green")}
+        ${mockStatCard("fa-star", dashboardStats.averageRating, "Avg. Rating", dashboardStats.averageRating !== "—" ? "Your average" : "No ratings yet", "purple")}
     </div>`;
 }
 
@@ -221,7 +221,7 @@ export function sidebarQuickLinks(role = "client") {
         ]
         : [
             ["register", "fa-shield-halved", "Become a Pro"],
-            ["support", "fa-circle-question", "Help Center"],
+            ["support", "fa-headset", "Support"],
             ["feed", "fa-gift", "Invite & Earn"],
         ];
     return `
@@ -322,7 +322,17 @@ export function providerMatchingCard(item) {
         </div>`;
 }
 
-export function mockInboxShell({ threads = [], messages = [], activeTitle = "Conversation", activeSub = "", safety = true, composeAttr = "data-client-chat" }) {
+export function mockInboxShell({
+    threads = [],
+    messages = [],
+    activeTitle = "Conversation",
+    activeSub = "",
+    safety = true,
+    composeAttr = "data-client-chat",
+    supportCount = 0,
+    callPeerId = null,
+    callRequestId = "",
+}) {
     return `
         <div class="mock-inbox-layout">
             <aside class="mock-inbox-list">
@@ -335,7 +345,7 @@ export function mockInboxShell({ threads = [], messages = [], activeTitle = "Con
                 ${mockFilterTabs([
                     ["all", `All Messages (${threads.length})`],
                     ["jobs", `Job Messages (${threads.length})`],
-                    ["support", "Support (1)"],
+                    ["support", supportCount ? `Support (${supportCount})` : "Support"],
                 ])}
                 <div class="mock-inbox-section">
                     <div class="mock-inbox-section__head"><strong>Job Conversations</strong><button type="button" data-view-link="inbox">View all</button></div>
@@ -358,8 +368,13 @@ export function mockInboxShell({ threads = [], messages = [], activeTitle = "Con
                         <span>${escapeHtml(activeSub)}</span>
                     </div>
                     <div class="mock-chat-panel__actions">
-                        <button type="button" data-view-link="call"><i class="fa-solid fa-phone"></i></button>
-                        <button type="button" data-view-link="call"><i class="fa-solid fa-video"></i></button>
+                        ${callPeerId ? `
+                            <button type="button" data-start-call="${callPeerId}" data-call-request="${callRequestId}" data-call-video="0" aria-label="Audio call"><i class="fa-solid fa-phone"></i></button>
+                            <button type="button" data-start-call="${callPeerId}" data-call-request="${callRequestId}" data-call-video="1" aria-label="Video call"><i class="fa-solid fa-video"></i></button>
+                        ` : `
+                            <button type="button" data-view-link="call" aria-label="Audio call"><i class="fa-solid fa-phone"></i></button>
+                            <button type="button" data-view-link="call" aria-label="Video call"><i class="fa-solid fa-video"></i></button>
+                        `}
                         <button type="button" data-view-link="detail"><i class="fa-solid fa-circle-info"></i></button>
                     </div>
                 </header>

@@ -26,6 +26,7 @@ class SupportModulesTest extends TestCase
         $response = $this->actingAs($support)->getJson('/api/state')->assertOk();
 
         $response->assertJsonPath('metrics.support.queueCount', 1);
+        $response->assertJsonPath('badgeCounts.supportQueue', 1);
         $response->assertJsonPath('support.permissions.canResolveDisputes', true);
         $response->assertJsonCount(1, 'requests');
         $this->assertSame($disputed->id, $response->json('requests.0.id'));

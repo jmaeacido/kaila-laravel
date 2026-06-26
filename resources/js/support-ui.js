@@ -4,7 +4,6 @@ import {
     formatBudget,
     loadDirectMessages,
     loadSupportJobMessages,
-    markNotificationsRead,
     postSupportNote,
     requestTitle,
     selectSupportPeer,
@@ -21,6 +20,7 @@ import {
     timeAgo,
 } from "./kaila-api.js";
 import { attachmentsFromForm, renderAttachments } from "./kaila-media.js";
+import { bindNotificationActions, notificationActivityRow } from "./kaila-shared-screens.js";
 import {
     card,
     escapeHtml,
@@ -149,10 +149,16 @@ export const supportScreens = {
     activity() {
         const notes = supportActivities();
         const notifications = store.notifications || [];
+        const hasUnread = (store.unreadNotifications || 0) > 0;
         return `
             ${supportToolbar("Activity", supportSubtitles.activity)}
             <div class="support-grid-2">
-                ${supportPanel("Notifications", notifications.length ? notifications.map(notificationRow).join("") : emptyState("No notifications yet."))}
+                ${supportPanel("Notifications", `
+                    ${hasUnread ? `<div class="mb-3"><button class="btn btn-outline-primary btn-sm" type="button" data-mark-notifications>Mark all as read</button></div>` : ""}
+                    <div class="notification-activity-list">
+                        ${notifications.length ? notifications.map(notificationActivityRow).join("") : emptyState("No notifications yet.")}
+                    </div>
+                `)}
                 ${supportPanel("Team Notes", `
                     ${canWriteSupportNotes() ? `<form data-support-note class="support-note-form"><textarea class="form-control" name="detail" placeholder="Add a team note for other support agents..." required></textarea><button class="btn btn-primary mt-2" type="submit">Post note</button></form>` : ""}
                     ${notes.length ? notes.map(activityRow).join("") : emptyState("No team notes yet.")}
@@ -209,6 +215,8 @@ export function getSupportStaffConfig() {
 }
 
 export function bindSupportActions({ toast, navigate }) {
+    bindNotificationActions({ navigate, toast });
+
     document.querySelectorAll("[data-support-thread]").forEach((button) => {
         button.addEventListener("click", async () => {
             selectSupportPeer(button.dataset.supportThread);
@@ -291,15 +299,6 @@ export function bindSupportActions({ toast, navigate }) {
                 toast(error.message);
             }
         });
-    });
-
-    document.querySelector("[data-mark-notifications]")?.addEventListener("click", async () => {
-        try {
-            await markNotificationsRead();
-            toast("Notifications marked read.");
-        } catch (error) {
-            toast(error.message);
-        }
     });
 
     if (document.querySelector("[data-support-compose]") && store.supportPeerId && !store.directMessages.length) {
@@ -410,10 +409,6 @@ function directMessageBubble(message) {
 
 function jobMessageBubble(message) {
     return `<div class="support-job-message"><strong>${escapeHtml(message.sender?.name || "User")}</strong><span>${escapeHtml(message.body || "")}</span></div>`;
-}
-
-function notificationRow(item) {
-    return `<div class="support-activity-row"><strong>${escapeHtml(item.title || "Notification")}</strong><small>${escapeHtml(item.body || "")} · ${timeAgo(item.created_at)}</small></div>`;
 }
 
 function activityRow(item) {

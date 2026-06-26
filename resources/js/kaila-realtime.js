@@ -35,6 +35,10 @@ export function initRealtime(handlers = {}) {
         socket.emit("identify", String(userId));
     });
 
+    socket.on("kaila.socket.identified", () => {
+        socket.__kailaIdentified = true;
+    });
+
     socket.on("kaila.state.updated", () => refreshState());
     socket.on("kaila.stateUpdated", () => refreshState());
     socket.on("kaila.request.created", () => refreshState());

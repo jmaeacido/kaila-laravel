@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 
 class GroqService
@@ -42,12 +43,13 @@ class GroqService
 
     public function assistantAnswer(array $context, array $messages): array
     {
+        $user = $context['user'] ?? null;
+        $contextPayload = $context;
+        unset($contextPayload['user']);
+
         $prompt = [
-            ['role' => 'system', 'content' => implode("\n", [
-                'You are Katabang, KAILA\'s friendly AI assistant for a mobile-first local-services marketplace in the Philippines.',
-                'Answer in concise, practical English. Return JSON with keys: answer (string), suggestions (array of up to 4 short follow-up questions).',
-                'Context: '.json_encode($context),
-            ])],
+            ['role' => 'system', 'content' => KailaAssistantGuide::systemInstructions()],
+            ['role' => 'user', 'content' => 'KAILA context for this user: '.json_encode($contextPayload)],
         ];
 
         foreach ($messages as $message) {
@@ -57,10 +59,23 @@ class GroqService
             ];
         }
 
-        return $this->chatJson($prompt, [
-            'answer' => 'I can guide you around KAILA, but Groq is unavailable right now. Open Customer Service in the app for immediate help.',
-            'suggestions' => ['How do I post a request?', 'How do I contact Customer Service?', 'How do I report a problem?'],
-        ]);
+        $user = $context['user'] ?? null;
+        $lastQuestion = (string) ($messages[count($messages) - 1]['content'] ?? '');
+        if ($user instanceof User) {
+            $faq = KailaAssistantGuide::matchFaq($lastQuestion, $user);
+            if ($faq) {
+                return $faq;
+            }
+        }
+
+        $fallback = $user instanceof User
+            ? KailaAssistantGuide::fallbackAnswer($user)
+            : [
+                'answer' => 'I can guide you around KAILA, but Groq is unavailable right now. Open Customer Service in the app for immediate help.',
+                'suggestions' => ['How do I post a request?', 'How do I contact Customer Service?', 'How do I log out?'],
+            ];
+
+        return $this->chatJson($prompt, $fallback);
     }
 
     public function validationSignal(string $type, array $responses): array

@@ -9,10 +9,20 @@ use Illuminate\Support\Facades\Http;
 
 class NavigationService
 {
+    public const TRAVEL_STATUSES = ['Accepted', 'In Progress', 'Revision Requested'];
+
     public function start(ServiceRequest $request, User $provider): object
     {
-        abort_unless($request->accepted_provider_id === $provider->id, 403);
-        abort_unless(in_array($request->status, ['Accepted', 'In Progress', 'Revision Requested'], true), 422);
+        abort_unless(
+            $request->accepted_provider_id === $provider->id,
+            403,
+            'Only the accepted provider can start navigation for this job.',
+        );
+        abort_unless(
+            in_array($request->status, self::TRAVEL_STATUSES, true),
+            422,
+            sprintf('Navigation is unavailable while the job is %s.', strtolower($request->status)),
+        );
 
         $destinationLat = $request->job_lat;
         $destinationLng = $request->job_lng;

@@ -16,7 +16,6 @@ import {
     jobAction,
     loadAnalytics,
     loadDirectMessages,
-    markNotificationsRead,
     requestTitle,
     sendDirectMessage,
     store,
@@ -27,8 +26,10 @@ import { attachmentsFromForm, renderAttachments } from "./kaila-media.js";
 import {
     analyticsScreen,
     bindFeedActions,
+    bindNotificationActions,
     bindStaffActions,
     feedScreen,
+    notificationActivityRow,
     validationScreen,
 } from "./kaila-shared-screens.js";
 import { getSupportStaffConfig } from "./support-ui.js";
@@ -176,10 +177,16 @@ const screens = {
     },
     activity() {
         const items = store.notifications || [];
+        const hasUnread = (store.unreadNotifications || 0) > 0;
         return `
             ${mockPageHero("Activity", "Staff notifications")}
             <div class="admin-grid-2">
-                ${adminPanel("Notifications", items.length ? items.map(notificationRow).join("") : emptyState("No notifications yet."))}
+                ${adminPanel("Notifications", `
+                    ${hasUnread ? `<div class="mb-3"><button class="btn btn-outline-primary btn-sm" type="button" data-mark-notifications>Mark all as read</button></div>` : ""}
+                    <div class="notification-activity-list">
+                        ${items.length ? items.map(notificationActivityRow).join("") : emptyState("No notifications yet.")}
+                    </div>
+                `)}
                 ${adminPanel("Audit Trail", auditRows())}
             </div>
         `;
@@ -229,9 +236,10 @@ export function initStaffApp() {
         fabIcon: isOpsUser() ? "fa-clipboard-check" : "fa-headset",
         getTitle: (view) => view === "home" ? "" : navItems.find(([id]) => id === view)?.[1] || "Support Desk",
         getSubtitle: (view) => subtitles[view] || subtitles.home,
-        bindScreenActions({ toast }) {
+        bindScreenActions({ navigate, toast }) {
             bindFeedActions({ toast });
             bindStaffActions({ toast });
+            bindNotificationActions({ navigate, toast });
 
             document.querySelector("[data-staff-support]")?.addEventListener("submit", async (event) => {
                 event.preventDefault();
@@ -242,15 +250,6 @@ export function initStaffApp() {
                     const attachments = await attachmentsFromForm(form);
                     await sendDirectMessage(peerId, new FormData(form).get("body"), attachments);
                     form.reset();
-                } catch (error) {
-                    toast(error.message);
-                }
-            });
-
-            document.querySelector("[data-mark-notifications]")?.addEventListener("click", async () => {
-                try {
-                    await markNotificationsRead();
-                    toast("Notifications marked read.");
                 } catch (error) {
                     toast(error.message);
                 }
@@ -510,10 +509,6 @@ function validationEntryCard(entry) {
             <button class="btn btn-sm btn-outline-danger" type="button" data-validation-delete="${entry.id}">Delete</button>
         </div>
     </article>`;
-}
-
-function notificationRow(item) {
-    return `<div class="mock-home-request"><span class="mock-thumb"><i class="fa-solid fa-bell"></i></span><span class="mock-home-request__body"><strong>${escapeHtml(item.title || item.type)}</strong><small>${escapeHtml(item.body || "")}</small></span></div>`;
 }
 
 function auditRows() {

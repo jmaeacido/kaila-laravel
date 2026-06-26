@@ -1,4 +1,4 @@
-import { logout, onStoreChange, refreshState, store } from "./kaila-api.js";
+import { logout, onStoreChange, refreshState, store, formatCountBadge, navBadgeFor } from "./kaila-api.js";
 import { sidebarPromoCards, sidebarQuickLinks, sidebarTrustCard } from "./kaila-mock-ui.js";
 
 export { store, refreshState } from "./kaila-api.js";
@@ -62,6 +62,114 @@ export function toast(message) {
     node.textContent = message;
     host.appendChild(node);
     setTimeout(() => node.remove(), 3200);
+}
+
+function closeKailaModal(backdrop, value) {
+    backdrop.classList.add("is-closing");
+    setTimeout(() => backdrop.remove(), 150);
+    return value;
+}
+
+export function kailaConfirm({
+    title = "Confirm action",
+    message = "",
+    confirmLabel = "Confirm",
+    cancelLabel = "Cancel",
+    tone = "primary",
+} = {}) {
+    return new Promise((resolve) => {
+        const backdrop = document.createElement("div");
+        backdrop.className = "kaila-modal-backdrop";
+        backdrop.innerHTML = `
+            <div class="kaila-modal" role="dialog" aria-modal="true" aria-labelledby="kaila-modal-title">
+                <header class="kaila-modal__head">
+                    <div>
+                        <span class="kaila-modal__eyebrow">KAILA</span>
+                        <strong id="kaila-modal-title">${escapeHtml(title)}</strong>
+                    </div>
+                    <button class="kaila-modal__close" type="button" data-kaila-modal-cancel aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+                </header>
+                ${message ? `<p class="kaila-modal__message">${escapeHtml(message)}</p>` : ""}
+                <div class="kaila-modal__actions">
+                    <button class="btn btn-light" type="button" data-kaila-modal-cancel>${escapeHtml(cancelLabel)}</button>
+                    <button class="btn btn-${tone === "danger" ? "danger" : "primary"}" type="button" data-kaila-modal-confirm>${escapeHtml(confirmLabel)}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(backdrop);
+
+        const finish = (value) => resolve(closeKailaModal(backdrop, value));
+        backdrop.querySelectorAll("[data-kaila-modal-cancel]").forEach((button) => {
+            button.addEventListener("click", () => finish(false));
+        });
+        backdrop.querySelector("[data-kaila-modal-confirm]")?.addEventListener("click", () => finish(true));
+        backdrop.addEventListener("click", (event) => {
+            if (event.target === backdrop) finish(false);
+        });
+    });
+}
+
+export function kailaPrompt({
+    title = "Enter details",
+    message = "",
+    defaultValue = "",
+    placeholder = "",
+    multiline = false,
+    confirmLabel = "Save",
+    cancelLabel = "Cancel",
+    required = true,
+} = {}) {
+    return new Promise((resolve) => {
+        const backdrop = document.createElement("div");
+        backdrop.className = "kaila-modal-backdrop";
+        const field = multiline
+            ? `<textarea class="kaila-modal__input" data-kaila-modal-input rows="4" placeholder="${escapeHtml(placeholder)}">${escapeHtml(defaultValue)}</textarea>`
+            : `<input class="kaila-modal__input" data-kaila-modal-input type="text" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}">`;
+
+        backdrop.innerHTML = `
+            <div class="kaila-modal" role="dialog" aria-modal="true" aria-labelledby="kaila-modal-title">
+                <header class="kaila-modal__head">
+                    <div>
+                        <span class="kaila-modal__eyebrow">KAILA</span>
+                        <strong id="kaila-modal-title">${escapeHtml(title)}</strong>
+                    </div>
+                    <button class="kaila-modal__close" type="button" data-kaila-modal-cancel aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+                </header>
+                ${message ? `<p class="kaila-modal__message">${escapeHtml(message)}</p>` : ""}
+                <label class="kaila-modal__field">${field}</label>
+                <div class="kaila-modal__actions">
+                    <button class="btn btn-light" type="button" data-kaila-modal-cancel>${escapeHtml(cancelLabel)}</button>
+                    <button class="btn btn-primary" type="button" data-kaila-modal-confirm>${escapeHtml(confirmLabel)}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(backdrop);
+
+        const input = backdrop.querySelector("[data-kaila-modal-input]");
+        input?.focus();
+
+        const finish = (value) => resolve(closeKailaModal(backdrop, value));
+        const submit = () => {
+            const value = input?.value?.trim() || "";
+            if (required && !value) {
+                input?.focus();
+                return;
+            }
+            finish(value || null);
+        };
+
+        backdrop.querySelectorAll("[data-kaila-modal-cancel]").forEach((button) => {
+            button.addEventListener("click", () => finish(null));
+        });
+        backdrop.querySelector("[data-kaila-modal-confirm]")?.addEventListener("click", submit);
+        input?.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !multiline) {
+                event.preventDefault();
+                submit();
+            }
+        });
+        backdrop.addEventListener("click", (event) => {
+            if (event.target === backdrop) finish(null);
+        });
+    });
 }
 
 export function firstName(name) {
@@ -226,12 +334,12 @@ export function createApp(options) {
         const userRole = store.user?.role || role;
         const displayRoleLabel = formatRoleLabel(userRole);
         const unread = store.unreadNotifications || 0;
+        const unreadBadge = formatCountBadge(unread);
         const userPhoto = store.user?.social_photo_url || "";
         const menuItems = topbarMenuItems(screens);
-        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post"]);
+        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post", "support-detail"]);
         const primaryNav = navItems.filter(([id]) => !id.startsWith("_") && !hiddenNav.has(id));
-        const inboxUnread = store.unreadMessages || store.unreadNotifications || 0;
-        const activityUnread = store.unreadNotifications || 0;
+        const navBadge = (viewId, explicitBadge) => explicitBadge || navBadgeFor(viewId);
 
         root.innerHTML = `
             <div class="kaila-app">
@@ -242,13 +350,11 @@ export function createApp(options) {
                     ${sidebarPostButton ? `<button class="mock-post-btn" type="button" data-view-link="post"><i class="fa-solid fa-plus"></i> Post Request</button>` : ""}
                     <nav class="kaila-nav" aria-label="Main navigation">
                         ${primaryNav.map(([id, label, iconName, , badge]) => {
-                            const navBadge = badge
-                                || (id === "inbox" && inboxUnread ? inboxUnread : "")
-                                || (id === "notifications" && activityUnread ? activityUnread : "");
+                            const countBadge = navBadge(id, badge);
                             return `
                             <button class="kaila-nav__item ${id === activeView ? "active" : ""}" type="button" data-view-link="${id}">
                                 ${icon(iconName)}<span>${label}</span>
-                                ${navBadge ? `<span class="kaila-badge kaila-badge--nav">${navBadge}</span>` : ""}
+                                ${countBadge ? `<span class="kaila-badge kaila-badge--nav">${countBadge}</span>` : ""}
                                 <i class="fa-solid fa-chevron-right kaila-nav__chevron"></i>
                             </button>`;
                         }).join("")}
@@ -268,7 +374,7 @@ export function createApp(options) {
                         <div class="kaila-topbar__spacer"></div>
                         <div class="kaila-topbar__actions">
                             <button class="kaila-icon-btn" type="button" data-view-link="notifications" aria-label="Notifications">
-                                ${icon("fa-bell")}${unread ? `<span class="kaila-badge">${unread}</span>` : ""}
+                                ${icon("fa-bell")}${unreadBadge ? `<span class="kaila-badge">${unreadBadge}</span>` : ""}
                             </button>
                             <div class="dropdown">
                                 <button class="kaila-user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -294,13 +400,11 @@ export function createApp(options) {
             </div>
             <nav class="kaila-bottom-nav" aria-label="Mobile navigation">
                 ${bottomNav.map(([id, iconName, label, badge]) => {
-                    const navBadge = badge
-                        || (id === "inbox" && inboxUnread ? inboxUnread : "")
-                        || (id === "notifications" && activityUnread ? activityUnread : "");
+                    const countBadge = navBadge(id, badge);
                     return `
                     <button class="kaila-bottom-nav__item ${id === activeView ? "active" : ""}" type="button" data-view-link="${id}">
                         ${icon(iconName)}
-                        ${navBadge ? `<span class="kaila-badge">${navBadge}</span>` : ""}
+                        ${countBadge ? `<span class="kaila-badge">${countBadge}</span>` : ""}
                         <span>${label}</span>
                     </button>`;
                 }).join("")}

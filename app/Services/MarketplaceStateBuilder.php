@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ServiceRequest;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class MarketplaceStateBuilder
@@ -220,6 +221,104 @@ class MarketplaceStateBuilder
             'providers' => User::query()->where('role', 'provider')->count(),
             'directThreads' => $this->directConversationCount($user),
             'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
+        ];
+    }
+
+    public function badgeCounts(User $user): array
+    {
+        $counts = [
+            'unreadMessages' => $this->unreadMessageCount($user),
+            'blockedUsers' => (int) DB::table('user_blocks')->where('blocker_id', $user->id)->count(),
+        ];
+
+        if ($user->role === 'client') {
+            $counts = array_merge($counts, $this->clientRequestCounts($user));
+        }
+
+        if ($user->role === 'provider') {
+            $provider = $this->providerMetrics($user);
+            $counts['matchingRequests'] = $provider['matchingRequests'];
+            $counts['activeJobs'] = $provider['activeJobs'];
+            $counts['offersSent'] = $provider['offersSent'];
+        }
+
+        if ($user->isCustomerService()) {
+            $support = $this->supportMetrics($user);
+            $counts['supportQueue'] = $support['queueCount'];
+            $counts['openReports'] = $support['openReports'];
+            $counts['supportDisputes'] = $support['disputes'];
+        }
+
+        if ($user->isStaff() && ! $user->isCustomerService()) {
+            $staff = $this->staffMetrics($user);
+            $counts['openReports'] = $staff['openReports'];
+            $counts['validationEntries'] = $staff['validationEntries'];
+            $counts['disputes'] = $staff['disputes'];
+        }
+
+        return $counts;
+    }
+
+    public function unreadMessageCount(User $user): int
+    {
+        $readStates = DB::table('message_read_states')
+            ->where('user_id', $user->id)
+            ->get();
+
+        $readAtFor = function (string $scope, string $threadId) use ($readStates): ?Carbon {
+            foreach ([[$scope, $threadId], [$scope, '*'], ['all', '*']] as [$scopeKey, $threadKey]) {
+                $row = $readStates->first(fn ($state) => $state->scope === $scopeKey && $state->thread_id === $threadKey);
+                if ($row) {
+                    return Carbon::parse($row->read_at);
+                }
+            }
+
+            return null;
+        };
+
+        $jobUnread = DB::table('job_messages')
+            ->join('service_requests', 'service_requests.id', '=', 'job_messages.service_request_id')
+            ->where('job_messages.sender_id', '!=', $user->id)
+            ->where(function ($query) use ($user) {
+                $query->where('service_requests.client_id', $user->id)
+                    ->orWhere('service_requests.accepted_provider_id', $user->id);
+            })
+            ->get(['job_messages.service_request_id', 'job_messages.created_at'])
+            ->filter(function ($message) use ($readAtFor) {
+                $readAt = $readAtFor('job', (string) $message->service_request_id);
+
+                return ! $readAt || Carbon::parse($message->created_at)->gt($readAt);
+            })
+            ->count();
+
+        $directUnread = DB::table('direct_messages')
+            ->where('recipient_id', $user->id)
+            ->get(['sender_id', 'created_at'])
+            ->filter(function ($message) use ($readAtFor) {
+                $readAt = $readAtFor('direct', (string) $message->sender_id);
+
+                return ! $readAt || Carbon::parse($message->created_at)->gt($readAt);
+            })
+            ->count();
+
+        return $jobUnread + $directUnread;
+    }
+
+    private function clientRequestCounts(User $user): array
+    {
+        $requests = ServiceRequest::query()->where('client_id', $user->id);
+
+        return [
+            'requestsAll' => (clone $requests)->count(),
+            'requestsOpen' => (clone $requests)->whereIn('status', ['Posted', 'Offers Received', 'Countered'])->count(),
+            'requestsActive' => (clone $requests)->whereIn('status', ['Accepted', 'In Progress', 'Provider Marked Done', 'Revision Requested'])->count(),
+            'requestsCompleted' => (clone $requests)->whereIn('status', ['Payment Released', 'Rated / Closed', 'Closed'])->count(),
+            'requestsDisputed' => (clone $requests)->where('status', 'Disputed')->count(),
+            'pendingOffers' => (int) DB::table('offers')
+                ->join('service_requests', 'service_requests.id', '=', 'offers.service_request_id')
+                ->where('service_requests.client_id', $user->id)
+                ->whereIn('service_requests.status', ['Posted', 'Offers Received', 'Countered'])
+                ->count(),
         ];
     }
 

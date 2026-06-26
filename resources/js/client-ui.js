@@ -3,6 +3,7 @@ import {
     blockUser,
     clientMetrics,
     clientRequests,
+    formatCountBadge,
     createRequest,
     deleteAccount,
     formatBudget,
@@ -11,7 +12,6 @@ import {
     loadDirectMessages,
     loadFeed,
     loadJobMessages,
-    markNotificationsRead,
     providerForRequest,
     refreshState,
     reportJob,
@@ -21,7 +21,6 @@ import {
     selectedRequest,
     sendDirectMessage,
     sendJobMessage,
-    startNavigation,
     statusTone,
     store,
     timeAgo,
@@ -30,23 +29,20 @@ import {
 } from "./kaila-api.js";
 import { attachmentsFromForm, renderAttachments } from "./kaila-media.js";
 import {
-    acceptCall,
-    bindRemoteMedia,
-    endCall,
-    getActiveCall,
-    hangupCall,
-    rejectCall,
-    startCall,
-} from "./kaila-webrtc.js";
-import {
     analyticsScreen,
+    activityScreen,
     assistantScreen,
     bindAssistantActions,
     bindFeedActions,
+    bindNotificationActions,
+    bindSupportHubActions,
     bindStaffActions,
+    callScreen,
     feedScreen,
+    marketplaceSupportScreen,
     validationScreen,
 } from "./kaila-shared-screens.js";
+import { bindCallActions } from "./kaila-webrtc.js";
 import {
     initLocationPicker,
     renderRouteMap,
@@ -97,7 +93,7 @@ const navItems = [
     ["reviews", "Reviews", "fa-star", "/reviews"],
     ["saved-providers", "Saved Providers", "fa-shield-heart", "/saved-providers"],
     ["settings", "Settings", "fa-gear", "/settings"],
-    ["support", "Help Center", "fa-circle-question", "/support"],
+    ["support", "Support", "fa-headset", "/support"],
     ["post", "Post Request", "fa-square-plus", "/post"],
     ["assistant", "Katabang", "fa-wand-magic-sparkles", "/assistant"],
     ["offers", "Offers", "fa-tags", "/jobs#offers"],
@@ -109,7 +105,6 @@ const navItems = [
     ["rating", "Rating", "fa-star", "/jobs#rating"],
     ["dispute", "Dispute", "fa-flag", "/support#dispute"],
     ["block", "Block", "fa-shield-halved", "/support#block"],
-    ["support-detail", "Support", "fa-headset", "/support"],
     ["analytics", "Analytics", "fa-chart-line", "/settings#analytics"],
     ["validation", "Validation", "fa-clipboard-check", "/settings#validation"],
     ["delete", "Delete", "fa-trash", "/settings#delete"],
@@ -207,6 +202,18 @@ function settingsSection(title, rows) {
             <h2>${escapeHtml(title)}</h2>
             <div class="settings-list">${rows.join("")}</div>
         </section>`;
+}
+
+function requestFilterCounts() {
+    const counts = store.badgeCounts || {};
+
+    return {
+        all: counts.requestsAll ?? clientRequests().length,
+        open: counts.requestsOpen ?? 0,
+        active: counts.requestsActive ?? 0,
+        completed: counts.requestsCompleted ?? 0,
+        disputed: counts.requestsDisputed ?? 0,
+    };
 }
 
 function demoClientRequestsList() {
@@ -396,8 +403,8 @@ const screens = {
                 </div>
                 <button class="kaila-location-chip mock-home-location" type="button"><i class="fa-solid fa-location-dot"></i> Makati City <i class="fa-solid fa-chevron-down"></i></button>
             </div>
-            ${clientStatRow()}
-            <div class="mock-home-section">${clientQuickActions(5)}</div>
+            ${clientStatRow(clientMetrics())}
+            <div class="mock-home-section">${clientQuickActions(store.unreadMessages || 0)}</div>
             <div class="mock-home-section">${mockSearchBar()}</div>
             <div class="mock-home-section">${mockCategoryPills()}</div>
             <div class="mock-home-section kaila-card">
@@ -469,7 +476,10 @@ const screens = {
         `;
     },
     requests() {
-        const items = demoClientRequestsList();
+        const items = clientRequests();
+        const counts = requestFilterCounts();
+        const unreadBadge = formatCountBadge(store.unreadNotifications);
+        const visibleCount = items.length;
         return `
             <section class="client-requests-page">
                 <div class="requests-mobile-top">
@@ -479,8 +489,8 @@ const screens = {
                         <p>Manage all your service requests</p>
                     </div>
                     <div class="requests-mobile-actions">
-                        <button type="button" data-view-link="notifications"><i class="fa-regular fa-bell"></i><b>3</b></button>
-                        ${avatar("Juan Dela Cruz", "", "")}
+                        <button type="button" data-view-link="notifications"><i class="fa-regular fa-bell"></i>${unreadBadge ? `<b>${unreadBadge}</b>` : ""}</button>
+                        ${avatar(store.user?.name || "Client", "", store.user?.social_photo_url || "")}
                     </div>
                 </div>
                 <div class="requests-page-head">
@@ -493,11 +503,11 @@ const screens = {
                 <div class="requests-toolbar">
                     <div class="requests-filter-tabs">
                         ${[
-                            ["All", "18", "fa-table-cells", "active"],
-                            ["Open", "5", "fa-clipboard", ""],
-                            ["Active", "6", "fa-briefcase", ""],
-                            ["Completed", "5", "fa-circle-check", ""],
-                            ["Disputed", "2", "fa-circle-exclamation", ""],
+                            ["All", counts.all, "fa-table-cells", "active"],
+                            ["Open", counts.open, "fa-clipboard", ""],
+                            ["Active", counts.active, "fa-briefcase", ""],
+                            ["Completed", counts.completed, "fa-circle-check", ""],
+                            ["Disputed", counts.disputed, "fa-circle-exclamation", ""],
                         ].map(([label, count, fa, active]) => `<button class="${active}" type="button"><i class="fa-solid ${fa}"></i>${label}<b>${count}</b></button>`).join("")}
                     </div>
                     <div class="requests-sort">
@@ -507,12 +517,9 @@ const screens = {
                     </div>
                 </div>
                 <div class="requests-list">
-                    ${items.map(requestListCard).join("")}
+                    ${items.length ? items.map((item) => mockRequestListCard(item)).join("") : `<p class="mock-empty">No requests yet. Post your first service request.</p>`}
                 </div>
-                <footer class="requests-pagination">
-                    <span>Showing 1 to 6 of 18 requests</span>
-                    <div><button class="active">1</button><button>2</button><button>3</button><button><i class="fa-solid fa-chevron-right"></i></button><button><i class="fa-solid fa-angles-right"></i></button></div>
-                </footer>
+                ${visibleCount ? `<footer class="requests-pagination"><span>Showing ${visibleCount} request${visibleCount === 1 ? "" : "s"}</span></footer>` : ""}
             </section>
         `;
     },
@@ -562,6 +569,9 @@ const screens = {
             activeTitle: providerForRequest(job)?.name || "Select a conversation",
             activeSub: job ? requestTitle(job) : "Job conversations",
             composeAttr: "data-client-chat",
+            supportCount: store.supportDesk ? 1 : 0,
+            callPeerId: providerForRequest(job)?.id || null,
+            callRequestId: job?.id || "",
         });
     },
     chat() {
@@ -570,23 +580,11 @@ const screens = {
     call() {
         const job = currentJob();
         const peer = providerForRequest(job);
-        const incoming = store.incomingCall;
-        return card(`
-            <div class="mock-chat-panel text-center p-4" data-call-shell>
-                ${avatar(peer?.name || incoming?.senderName || "Contact", "", peer?.social_photo_url || "")}
-                <h3 class="mt-3">${incoming ? `Incoming call from ${escapeHtml(incoming.senderName || "KAILA user")}` : "Voice / video call"}</h3>
-                <p class="text-muted">${incoming ? "Answer to connect securely over WebRTC." : "Start a call from job chat when both users are online."}</p>
-                <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    ${incoming ? `
-                        <button class="btn btn-success" type="button" data-accept-call"><i class="fa-solid fa-phone"></i> Accept</button>
-                        <button class="btn btn-danger" type="button" data-reject-call"><i class="fa-solid fa-phone-slash"></i> Decline</button>
-                    ` : getActiveCall() ? `
-                        <button class="btn btn-danger" type="button" data-hangup-call"><i class="fa-solid fa-phone-slash"></i> End call</button>
-                    ` : peer ? `
-                        <button class="btn btn-primary" type="button" data-start-call="${peer.id}"><i class="fa-solid fa-video"></i> Start call</button>
-                    ` : ""}
-                </div>
-            </div>`);
+        return callScreen({
+            peerName: peer?.name || "Contact",
+            peerPhoto: peer?.social_photo_url || "",
+            subtitle: peer ? "Start a voice or video call from job chat." : "Select a job conversation first.",
+        });
     },
     tracking() {
         const job = currentJob();
@@ -638,30 +636,36 @@ const screens = {
             </form>`);
     },
     support() {
-        const messages = store.directMessages;
-        return card(`
-            <div class="mock-chat-panel__messages mb-3">${messages.map((message) => `<div class="mock-chat-bubble ${message.sender_id === store.user?.id ? "out" : "in"}">${escapeHtml(message.body)}${renderAttachments(message.attachments)}</div>`).join("") || `<p class="mock-empty">Message KAILA Support for help.</p>`}</div>
-            <form data-client-support class="mock-chat-compose">
-                <button type="button"><i class="fa-solid fa-paperclip"></i></button>
-                <input class="form-control" name="body" placeholder="Message KAILA Support" required>
-                <button class="mock-send-btn" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
-            </form>`);
+        const hash = window.location.hash.replace("#", "");
+        const activePanel = ["chat", "dispute", "block"].includes(hash) ? hash : "chat";
+        const disputeFormHtml = `
+            <form data-client-dispute class="help-hub__form">
+                <h2>Report / Dispute Job</h2>
+                <p>Active jobs are marked disputed for support review. A moderation report is also filed.</p>
+                <label class="form-label">Reason<input class="form-control" name="reason" required></label>
+                <label class="form-label">Details<textarea class="form-control" name="details" rows="4"></textarea></label>
+                <button class="btn btn-danger w-100" type="submit">Send to support</button>
+            </form>`;
+        const provider = providerForRequest(currentJob());
+        const blockFormHtml = `
+            <form data-client-block class="help-hub__form">
+                <h2>Block User</h2>
+                <p>Block ${escapeHtml(provider?.name || "this user")} and alert support.</p>
+                <label class="form-label">Reason<input class="form-control" name="reason" required></label>
+                <label class="form-label">Details<textarea class="form-control" name="details" rows="4"></textarea></label>
+                <button class="btn btn-danger w-100" type="submit">Block and report</button>
+            </form>`;
+        return marketplaceSupportScreen({
+            composeAttr: "data-client-support",
+            activePanel,
+            showDispute: true,
+            showBlock: true,
+            disputeFormHtml,
+            blockFormHtml,
+        });
     },
     notifications() {
-        const items = store.notifications || [];
-        return `
-            ${mockPageHero("Activity", subtitles.notifications)}
-            ${card(`
-                ${sectionHead("Recent Activity", `<button class="btn btn-outline-primary btn-sm" type="button" data-mark-notifications">Mark read</button>`)}
-                ${items.length ? items.map((item) => `
-                    <div class="mock-home-request">
-                        <span class="mock-thumb"><i class="fa-solid fa-bell"></i></span>
-                        <span class="mock-home-request__body">
-                            <strong>${escapeHtml(item.title || item.type)}</strong>
-                            <small>${escapeHtml(item.body || "")} · ${timeAgo(item.created_at)}</small>
-                        </span>
-                    </div>`).join("") : `<p class="mock-empty">No notifications yet.</p>`}
-            `)}`;
+        return activityScreen({ title: "Activity", subtitle: subtitles.notifications });
     },
     settings() {
         return `
@@ -713,7 +717,13 @@ const screens = {
                         ])}
 
                         ${settingsSection("Safety & Privacy", [
-                            settingsRow({ iconName: "fa-user-group", tone: "orange", label: "Blocked users", sub: "Manage users you've blocked.", badge: "2" }),
+                            settingsRow({
+                                iconName: "fa-user-group",
+                                tone: "orange",
+                                label: "Blocked users",
+                                sub: "Manage users you've blocked.",
+                                badge: formatCountBadge(store.badgeCounts?.blockedUsers),
+                            }),
                         ])}
 
                         <section class="settings-section-card settings-danger-card">
@@ -776,6 +786,9 @@ export function initClientApp() {
 function bindClientScreenActions({ navigate, toast: showToast }) {
     bindFeedActions({ toast: showToast });
     bindAssistantActions({ toast: showToast });
+    bindSupportHubActions({ navigate, toast: showToast });
+    bindNotificationActions({ navigate, toast: showToast, selectRequestAction: selectRequest });
+    bindCallActions({ navigate, toast: showToast });
     if (isStaffUser()) bindStaffActions({ toast: showToast });
 
     const locationMap = document.querySelector("[data-location-map]");
@@ -825,47 +838,6 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
             label: "Provider route",
         }).catch((error) => showToast(error.message));
     }
-
-    document.querySelectorAll("[data-start-call]").forEach((button) => {
-        button.addEventListener("click", async () => {
-            const job = currentJob();
-            try {
-                await startCall({
-                    targetUserId: Number(button.dataset.startCall),
-                    requestId: job?.id || "",
-                    withVideo: true,
-                    senderName: store.user?.name,
-                });
-                showToast("Calling...");
-                navigate("call");
-            } catch (error) {
-                showToast(error.message);
-            }
-        });
-    });
-
-    document.querySelector("[data-accept-call]")?.addEventListener("click", async () => {
-        try {
-            const call = await acceptCall(store.incomingCall);
-            store.incomingCall = null;
-            bindRemoteMedia(document.querySelector("[data-call-shell]"), call.stream);
-            showToast("Call connected.");
-        } catch (error) {
-            showToast(error.message);
-        }
-    });
-
-    document.querySelector("[data-reject-call]")?.addEventListener("click", async () => {
-        if (store.incomingCall) await rejectCall(store.incomingCall);
-        store.incomingCall = null;
-        endCall();
-        showToast("Call declined.");
-    });
-
-    document.querySelector("[data-hangup-call]")?.addEventListener("click", async () => {
-        await hangupCall();
-        showToast("Call ended.");
-    });
 
     document.querySelector("[data-client-post]")?.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -997,15 +969,6 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
             const attachments = await attachmentsFromForm(form);
             await sendDirectMessage(support.id, new FormData(form).get("body"), attachments);
             form.reset();
-        } catch (error) {
-            showToast(error.message);
-        }
-    });
-
-    document.querySelector("[data-mark-notifications]")?.addEventListener("click", async () => {
-        try {
-            await markNotificationsRead();
-            showToast("Notifications marked read.");
         } catch (error) {
             showToast(error.message);
         }

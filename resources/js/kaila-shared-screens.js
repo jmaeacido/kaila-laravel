@@ -8,47 +8,164 @@ import {
     timeAgo,
 } from "./kaila-api.js";
 import { attachmentsFromForm, mediaUploadField, renderAttachments } from "./kaila-media.js";
-import { avatar, card, escapeHtml, icon, sectionHead } from "./kaila-ui-core.js";
+import { avatar, card, escapeHtml, firstName, icon, sectionHead } from "./kaila-ui-core.js";
 
 export function feedPostCard(post) {
-    return card(`
-        <div class="kaila-feed-post">
-            <div class="kaila-feed-post__head">
-                ${avatar(post.author?.name)}
+    const author = post.author?.name || post.author_name || "KAILA user";
+    const role = post.author?.role || post.role || "Community member";
+    const reactions = Array.isArray(post.reactions) ? post.reactions.length : (post.reactions || post.reactions_count || 0);
+    const comments = Array.isArray(post.comments) ? post.comments.length : (post.comments || post.comments_count || 0);
+    return `
+        <article class="social-post-card">
+            <header class="social-post-head">
+                ${avatar(author, "", post.author?.social_photo_url || "")}
                 <div>
-                    <strong>${escapeHtml(post.author?.name || "KAILA user")}</strong>
-                    <div class="kaila-feed-post__meta">${timeAgo(post.created_at)}</div>
+                    <strong>${escapeHtml(author)}</strong>
+                    <span>${escapeHtml(role)} · ${timeAgo(post.created_at)}</span>
                 </div>
-            </div>
-            <p class="kaila-feed-post__body">${escapeHtml(post.body || "")}</p>
+                <button class="social-icon-button" type="button" aria-label="More options"><i class="fa-solid fa-ellipsis"></i></button>
+            </header>
+            <p class="social-post-body">${escapeHtml(post.body || "")}</p>
             ${renderAttachments(post.media)}
-            <div class="kaila-feed-post__actions">
-                <button class="btn btn-link p-0" type="button" data-feed-like="${post.id}"><i class="fa-solid fa-thumbs-up"></i> ${post.reactions || 0}</button>
-                <button class="btn btn-link p-0" type="button" data-feed-comment-toggle="${post.id}"><i class="fa-solid fa-comment"></i> ${post.comments || 0}</button>
+            <div class="social-post-stats">
+                <span><i class="fa-solid fa-thumbs-up"></i> ${reactions} likes</span>
+                <button type="button" data-feed-comment-toggle="${post.id}">${comments} comments</button>
             </div>
-            <form class="kaila-feed-comment" data-feed-comment="${post.id}" hidden>
-                <input class="kaila-input" name="body" placeholder="Write a comment" required>
-                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+            <div class="social-post-actions">
+                <button type="button" data-feed-like="${post.id}"><i class="fa-regular fa-thumbs-up"></i> Like</button>
+                <button type="button" data-feed-comment-toggle="${post.id}"><i class="fa-regular fa-comment"></i> Comment</button>
+                <button type="button" data-toast="Sharing is coming soon."><i class="fa-regular fa-share-from-square"></i> Share</button>
+            </div>
+            <form class="social-comment-form" data-feed-comment="${post.id}" hidden>
+                ${avatar(store.user?.name || "You", "small", store.user?.social_photo_url || "")}
+                <input name="body" placeholder="Write a comment..." required>
+                <button type="submit" aria-label="Post comment"><i class="fa-solid fa-paper-plane"></i></button>
             </form>
-        </div>
-    `);
+        </article>
+    `;
 }
 
 export function feedScreen() {
-    const posts = store.feedPosts || [];
+    const posts = (store.feedPosts || []).length ? store.feedPosts : demoFeedPosts();
+    const userName = store.user?.name || "Alex D.";
     return `
-        ${card(`
-            <h2 style="margin:0 0 6px">Community Feed</h2>
-            <p style="margin:0 0 14px;color:var(--kaila-muted)">Share updates, tips, and local service highlights.</p>
-            <form data-feed-compose>
-                <div class="kaila-field"><label>What's happening?</label><textarea class="kaila-textarea" name="body" required maxlength="1000" placeholder="Share something helpful with the KAILA community"></textarea></div>
-                ${mediaUploadField("attachments")}
-                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Post update</button>
-            </form>
-        `)}
-        <div style="height:14px"></div>
-        ${posts.length ? posts.map(feedPostCard).join("") : card(`<p class="kaila-empty">No posts yet. Be the first to share.</p>`)}
+        <div class="social-feed-shell">
+            <aside class="social-feed-side social-feed-side--left">
+                <section class="social-panel social-profile-panel">
+                    ${avatar(userName, "large", store.user?.social_photo_url || "")}
+                    <strong>${escapeHtml(userName)}</strong>
+                    <span>${escapeHtml(store.user?.role || "Client")} · ${escapeHtml(store.user?.area || "Makati City")}</span>
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-view-link="settings">View profile</button>
+                </section>
+                <section class="social-panel">
+                    <h3>Shortcuts</h3>
+                    <button type="button" data-view-link="home"><i class="fa-solid fa-house"></i> Home</button>
+                    <button type="button" data-view-link="providers"><i class="fa-solid fa-user-group"></i> Providers</button>
+                    <button type="button" data-view-link="inbox"><i class="fa-solid fa-comment-dots"></i> Messages</button>
+                    <button type="button" data-view-link="support"><i class="fa-solid fa-headset"></i> Support</button>
+                </section>
+            </aside>
+
+            <main class="social-feed-main">
+                <div class="social-feed-title">
+                    <div>
+                        <h1>Community Feed</h1>
+                        <p>See local service updates, tips, provider posts, and neighborhood activity.</p>
+                    </div>
+                    <button class="btn btn-primary" type="button" data-feed-focus><i class="fa-solid fa-plus"></i> Create post</button>
+                </div>
+
+                <section class="social-stories" aria-label="Stories">
+                    ${["Plumbing tips", "Cleaning wins", "Electrical help", "Provider spotlight"].map((item, index) => `
+                        <button class="social-story-card" type="button" data-toast="${escapeHtml(item)} stories are coming soon.">
+                            <span><i class="fa-solid ${["fa-faucet-drip", "fa-bucket", "fa-bolt", "fa-award"][index]}"></i></span>
+                            <strong>${escapeHtml(item)}</strong>
+                        </button>
+                    `).join("")}
+                </section>
+
+                <section class="social-composer-card">
+                    <form data-feed-compose>
+                        <div class="social-composer-top">
+                            ${avatar(userName, "", store.user?.social_photo_url || "")}
+                            <textarea name="body" required maxlength="1000" placeholder="What's on your mind, ${escapeHtml(firstName(userName))}?"></textarea>
+                        </div>
+                        <div class="social-upload-row">
+                            ${mediaUploadField("attachments")}
+                        </div>
+                        <div class="social-composer-actions">
+                            <button type="button" data-feed-file><i class="fa-solid fa-image text-success"></i> Photo/video</button>
+                            <button type="button" data-toast="Feeling/activity is coming soon."><i class="fa-regular fa-face-smile text-warning"></i> Feeling</button>
+                            <button type="button" data-toast="Check-in is coming soon."><i class="fa-solid fa-location-dot text-danger"></i> Check in</button>
+                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Post</button>
+                        </div>
+                    </form>
+                </section>
+
+                <div class="social-post-list">
+                    ${posts.map(feedPostCard).join("")}
+                </div>
+            </main>
+
+            <aside class="social-feed-side social-feed-side--right">
+                <section class="social-panel">
+                    <h3>Trending in KAILA</h3>
+                    <button type="button" data-toast="Opening trend soon."><b>Leaking faucet repairs</b><span>42 posts today</span></button>
+                    <button type="button" data-toast="Opening trend soon."><b>Move-out cleaning</b><span>18 provider updates</span></button>
+                    <button type="button" data-toast="Opening trend soon."><b>Emergency electrical</b><span>Popular in Makati</span></button>
+                </section>
+                <section class="social-panel">
+                    <h3>Suggested providers</h3>
+                    ${["Makati Plumbing Pros", "BrightWire Electric", "FreshNest Cleaning"].map((name) => `
+                        <button type="button" data-view-link="providers">
+                            ${avatar(name, "small")}
+                            <span>${escapeHtml(name)}</span>
+                        </button>
+                    `).join("")}
+                </section>
+                <section class="social-panel social-safety-note">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <div>
+                        <strong>Stay safe</strong>
+                        <p>Keep payments and conversations inside KAILA whenever possible.</p>
+                    </div>
+                </section>
+            </aside>
+        </div>
     `;
+}
+
+function demoFeedPosts() {
+    const now = Date.now();
+    return [
+        {
+            id: "demo-feed-1",
+            author: { name: "Makati Plumbing Pros", role: "Verified provider" },
+            body: "Quick tip: if your faucet keeps dripping after closing the handle, the cartridge or washer may need replacement. Post a clear photo so providers can quote faster.",
+            reactions: 24,
+            comments: 8,
+            created_at: new Date(now - 28 * 60 * 1000).toISOString(),
+            media: [],
+        },
+        {
+            id: "demo-feed-2",
+            author: { name: "Alex D.", role: "Client" },
+            body: "Booked a deep cleaning provider through KAILA today. Comparing offers made it easier to choose based on schedule and reviews.",
+            reactions: 18,
+            comments: 4,
+            created_at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+            media: [],
+        },
+        {
+            id: "demo-feed-3",
+            author: { name: "BrightWire Electric", role: "Top rated provider" },
+            body: "Reminder: avoid overloading extension cords during rainy season. If breakers trip repeatedly, have the outlet checked before using it again.",
+            reactions: 37,
+            comments: 11,
+            created_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
+            media: [],
+        },
+    ];
 }
 
 export function assistantScreen() {
@@ -104,6 +221,14 @@ export function validationScreen() {
 }
 
 export function bindFeedActions({ toast }) {
+    document.querySelector("[data-feed-focus]")?.addEventListener("click", () => {
+        document.querySelector("[data-feed-compose] textarea")?.focus();
+    });
+
+    document.querySelector("[data-feed-file]")?.addEventListener("click", () => {
+        document.querySelector("[data-feed-compose] input[type='file']")?.click();
+    });
+
     document.querySelector("[data-feed-compose]")?.addEventListener("submit", async (event) => {
         event.preventDefault();
         const form = event.target;
@@ -121,6 +246,10 @@ export function bindFeedActions({ toast }) {
 
     document.querySelectorAll("[data-feed-like]").forEach((button) => {
         button.addEventListener("click", async () => {
+            if (String(button.dataset.feedLike).startsWith("demo-")) {
+                toast("Demo reaction saved.");
+                return;
+            }
             try {
                 await feedReaction(button.dataset.feedLike, "like");
                 await loadFeed();
@@ -140,6 +269,11 @@ export function bindFeedActions({ toast }) {
     document.querySelectorAll("[data-feed-comment]").forEach((form) => {
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            if (String(form.dataset.feedComment).startsWith("demo-")) {
+                form.reset();
+                toast("Demo comment posted.");
+                return;
+            }
             try {
                 await feedComment(form.dataset.feedComment, new FormData(form).get("body"));
                 form.reset();

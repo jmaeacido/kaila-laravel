@@ -14,10 +14,15 @@ Route::get('/support', [MarketplaceController::class, 'app'])->name('support');
 Route::get('/home', [MarketplaceController::class, 'app'])->name('app.home');
 Route::get('/requests', [MarketplaceController::class, 'app'])->name('app.requests');
 Route::get('/jobs', [MarketplaceController::class, 'app'])->name('app.jobs');
+Route::get('/bookings', [MarketplaceController::class, 'app'])->name('app.bookings');
 Route::get('/post', [MarketplaceController::class, 'app'])->name('app.post');
 Route::get('/messages', [MarketplaceController::class, 'app'])->name('app.messages');
 Route::get('/notifications', [MarketplaceController::class, 'app'])->name('app.notifications');
 Route::get('/feed', [MarketplaceController::class, 'app'])->name('app.feed');
+Route::get('/favorites', [MarketplaceController::class, 'app'])->name('app.favorites');
+Route::get('/payments', [MarketplaceController::class, 'app'])->name('app.payments');
+Route::get('/reviews', [MarketplaceController::class, 'app'])->name('app.reviews');
+Route::get('/saved-providers', [MarketplaceController::class, 'app'])->name('app.saved-providers');
 Route::get('/settings', [MarketplaceController::class, 'app'])->name('app.settings');
 Route::get('/assistant', [MarketplaceController::class, 'app'])->name('app.assistant');
 

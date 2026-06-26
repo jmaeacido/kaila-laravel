@@ -48,6 +48,8 @@ const subtitles = {
     analytics: "Groq-powered pilot insights.",
     validation: "Record surveys and interviews.",
 };
+let loadedStaffFeed = false;
+let loadedStaffAnalytics = false;
 
 const screens = {
     home() {
@@ -151,10 +153,12 @@ export function initStaffApp() {
                 }
             });
 
-            if (document.querySelector("[data-feed-compose]")) {
+            if (document.querySelector("[data-feed-compose]") && !loadedStaffFeed) {
+                loadedStaffFeed = true;
                 import("./kaila-api.js").then(({ loadFeed }) => loadFeed().catch(() => {}));
             }
-            if (document.querySelector("[data-refresh-analytics]")) {
+            if (document.querySelector("[data-refresh-analytics]") && !loadedStaffAnalytics) {
+                loadedStaffAnalytics = true;
                 loadAnalytics().catch(() => {});
             }
         },

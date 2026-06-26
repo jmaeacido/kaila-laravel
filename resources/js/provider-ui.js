@@ -50,6 +50,9 @@ import {
 const providerName = () => store.user?.name || "Provider";
 const area = () => store.user?.area || store.user?.provider_profile?.area || "Your area";
 const categories = () => store.categories || [];
+let loadedProviderJobMessagesFor = null;
+let loadedProviderSupportFor = null;
+let loadedProviderFeed = false;
 
 const navItems = [
     ["home", "Dashboard", "fa-gauge-high", "/home"],
@@ -421,13 +424,16 @@ function bindProviderScreenActions({ navigate, toast: showToast }) {
     });
 
     const job = currentJob();
-    if (document.querySelector("[data-provider-chat]") && job) {
+    if (document.querySelector("[data-provider-chat]") && job && loadedProviderJobMessagesFor !== job.id) {
+        loadedProviderJobMessagesFor = job.id;
         loadJobMessages(job.id).catch(() => {});
     }
-    if (document.querySelector("[data-provider-support]") && store.supportDesk) {
+    if (document.querySelector("[data-provider-support]") && store.supportDesk && loadedProviderSupportFor !== store.supportDesk.id) {
+        loadedProviderSupportFor = store.supportDesk.id;
         loadDirectMessages(store.supportDesk.id).catch(() => {});
     }
-    if (document.querySelector("[data-feed-compose]")) {
+    if (document.querySelector("[data-feed-compose]") && !loadedProviderFeed) {
+        loadedProviderFeed = true;
         loadFeed().catch(() => {});
     }
 }

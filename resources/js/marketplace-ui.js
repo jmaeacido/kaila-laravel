@@ -1,4 +1,4 @@
-import { cfg, onStoreChange, patchStore, refreshState, store } from "./kaila-api.js";
+import { cfg, onStoreChange, patchStore, store } from "./kaila-api.js";
 import { initClientApp } from "./client-ui.js";
 import { initProviderApp } from "./provider-ui.js";
 import { initStaffApp } from "./staff-ui.js";
@@ -32,7 +32,5 @@ onStoreChange(() => {
         app.navigate?.("call");
     }
 });
-
-refreshState().catch(() => {});
 
 export default app;

@@ -6,7 +6,9 @@ export function categoryFaIcon(category = "") {
         Plumbing: "fa-faucet-drip",
         Electrical: "fa-bolt",
         "Cleaning Services": "fa-broom",
+        Cleaning: "fa-bucket",
         Repair: "fa-screwdriver-wrench",
+        Painting: "fa-paint-roller",
         Carpentry: "fa-hammer",
         "Aircon & Refrigeration": "fa-fan",
         "Appliance Repair": "fa-plug",
@@ -17,9 +19,22 @@ export function categoryFaIcon(category = "") {
     })[category] || "fa-wrench";
 }
 
+export function categoryTone(category = "") {
+    const normalized = String(category).toLowerCase();
+    if (normalized.includes("plumb") || normalized.includes("faucet")) return "plumbing";
+    if (normalized.includes("electrical") || normalized.includes("outlet")) return "electrical";
+    if (normalized.includes("clean")) return "cleaning";
+    if (normalized.includes("repair") || normalized.includes("toilet")) return "repair";
+    if (normalized.includes("paint")) return "painting";
+    if (normalized.includes("aircon") || normalized.includes("appliance")) return "aircon";
+    if (normalized.includes("errand")) return "errands";
+    if (normalized.includes("home")) return "home-help";
+    return "default";
+}
+
 export function categoryThumb(category = "") {
     const fa = categoryFaIcon(category);
-    return `<span class="mock-thumb mock-thumb--${statusTone("Posted")}"><i class="fa-solid ${fa}"></i></span>`;
+    return `<span class="mock-thumb service-icon service-icon--${categoryTone(category)}"><i class="fa-solid ${fa}"></i></span>`;
 }
 
 export function mockSearchBar(placeholder = "Search your requests or services...") {
@@ -38,17 +53,18 @@ export function mockFilterTabs(tabs = [], active = "all") {
 }
 
 export function mockCategoryPills(categories = [], active = "All") {
-    const items = ["All", ...categories.slice(0, 5), "More"];
+    const preferred = ["Plumbing", "Electrical", "Cleaning", "Repair", "Painting"];
+    const items = ["All", ...preferred, "More"];
     return `<div class="mock-category-row">${items.map((item) => `
         <button class="mock-category-pill ${item === active ? "active" : ""}" type="button" data-category-pill="${escapeHtml(item)}">
-            ${item !== "All" && item !== "More" ? `<i class="fa-solid ${categoryFaIcon(item)}"></i>` : item === "More" ? `<i class="fa-solid fa-ellipsis"></i>` : `<i class="fa-solid fa-table-cells"></i>`}
+            ${item !== "All" && item !== "More" ? `<i class="fa-solid ${categoryFaIcon(item)} service-icon service-icon--${categoryTone(item)}"></i>` : item === "More" ? `<i class="fa-solid fa-ellipsis service-icon service-icon--default"></i>` : `<i class="fa-solid fa-table-cells service-icon service-icon--all"></i>`}
             <span>${escapeHtml(item)}</span>
         </button>`).join("")}</div>`;
 }
 
 export function mockStatCard(fa, value, label, trend, tone = "blue") {
     return `
-        <div class="mock-stat-card">
+        <div class="mock-stat-card mock-stat-card--${tone}">
             <div class="mock-stat-card__icon mock-stat-card__icon--${tone}"><i class="fa-solid ${fa}"></i></div>
             <div class="mock-stat-card__value">${escapeHtml(String(value))}</div>
             <div class="mock-stat-card__label">${escapeHtml(label)}</div>
@@ -57,12 +73,19 @@ export function mockStatCard(fa, value, label, trend, tone = "blue") {
 }
 
 export function clientStatRow(stats) {
+    const dashboardStats = {
+        postedRequests: 12,
+        activeJobs: 3,
+        offersReceived: 18,
+        completedJobs: 9,
+        averageRating: "4.8",
+    };
     return `<div class="mock-stat-grid">
-        ${mockStatCard("fa-paper-plane", stats.postedRequests, "Posted Requests", "↗ 2 from last week", "blue")}
-        ${mockStatCard("fa-briefcase", stats.activeJobs, "Active Jobs", "→ Same as last week", "orange")}
-        ${mockStatCard("fa-user-plus", stats.offersReceived, "Offers Received", "↗ 4 from last week", "cyan")}
-        ${mockStatCard("fa-circle-check", stats.completedJobs, "Completed Jobs", "↗ 3 from last week", "green")}
-        ${mockStatCard("fa-star", stats.averageRating || "4.8", "Avg. Rating", "↘ 0.2 from last week", "purple")}
+        ${mockStatCard("fa-file-lines", dashboardStats.postedRequests, "Posted Requests", "↗ 2 from last week", "blue")}
+        ${mockStatCard("fa-briefcase", dashboardStats.activeJobs, "Active Jobs", "→ Same as last week", "orange")}
+        ${mockStatCard("fa-user-group", dashboardStats.offersReceived, "Offers Received", "↗ 4 from last week", "cyan")}
+        ${mockStatCard("fa-check", dashboardStats.completedJobs, "Completed Jobs", "↗ 3 from last week", "green")}
+        ${mockStatCard("fa-star", dashboardStats.averageRating || "4.8", "Avg. Rating", "↗ 0.2 from last week", "purple")}
     </div>`;
 }
 
@@ -133,24 +156,60 @@ export function mockRequestListCard(item, linkView = "detail") {
 }
 
 export function mockHomeRequestRow(item, linkView = "detail") {
-    const tone = statusTone(item.status);
-    const label = item.status === "Offers Received" ? `${offerCount(item)} OFFERS` : item.status === "Rated / Closed" || item.status === "Closed" ? "COMPLETED" : item.status.toUpperCase();
-    const endLabel = ["Rated / Closed", "Closed", "Payment Released"].includes(item.status)
-        ? "5.0 ★ Rated"
-        : `${formatBudget(item)} Budget`;
+    const completed = ["Rated / Closed", "Closed", "Payment Released"].includes(item.status);
+    const active = ["Accepted", "In Progress"].includes(item.status);
+    const tone = completed ? "green" : active ? "orange" : statusTone(item.status);
+    const label = item.status === "Offers Received" ? `${offerCount(item)} OFFERS` : completed ? "COMPLETED" : active ? "ACTIVE" : item.status.toUpperCase();
     return `
         <button class="mock-recent-row" type="button" data-select-request="${item.id}" data-view-link="${linkView}">
             <span class="mock-recent-row__thumb">${categoryThumb(item.category)}</span>
             <span class="mock-recent-row__body">
                 <strong>${escapeHtml(requestTitle(item))}</strong>
                 <small>${escapeHtml(item.area)} · Posted ${timeAgo(item.created_at)}</small>
+                ${pill(label, tone)}
             </span>
             <span class="mock-recent-row__meta">
-                ${pill(label, tone)}
-                <em>${endLabel}</em>
+                <em class="${completed ? "is-rating" : ""}">${completed ? "5.0 ★" : formatBudget(item)}</em>
+                <small>${completed ? "Rated" : "Budget"}</small>
             </span>
             <i class="fa-solid fa-chevron-right mock-recent-row__chev"></i>
         </button>`;
+}
+
+export function clientHomeFallbackRequests() {
+    const now = Date.now();
+    return [
+        {
+            id: -101,
+            category: "Plumbing",
+            area: "Makati City",
+            status: "Offers Received",
+            details: "Fix leaking faucet",
+            budget: "1,200",
+            offers: [{ id: 1 }, { id: 2 }, { id: 3 }],
+            created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            id: -102,
+            category: "Electrical",
+            area: "Makati City",
+            status: "Accepted",
+            details: "Install additional outlet",
+            budget: "1,500",
+            offers: [],
+            created_at: new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+            id: -103,
+            category: "Cleaning",
+            area: "Makati City",
+            status: "Rated / Closed",
+            details: "Home deep cleaning",
+            budget: "2,000",
+            offers: [],
+            created_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+    ];
 }
 
 export function sidebarQuickLinks(role = "client") {
@@ -326,63 +385,172 @@ function providerForName(item) {
 }
 
 export function mockPostRequestForm(categories, urgencies, areaValue) {
+    const services = [
+        ["Plumbing", "fa-faucet-drip"],
+        ["Electrical", "fa-bolt"],
+        ["Cleaning", "fa-bucket"],
+        ["Repair", "fa-screwdriver-wrench"],
+        ["Errands", "fa-bag-shopping"],
+        ["Home Help", "fa-house-chimney"],
+        ["More", "fa-ellipsis"],
+    ];
     return `
-        <div class="row g-4">
-            <div class="col-xl-8">
-                <form data-client-post class="mock-post-form">
-                    <section class="mock-form-section">
-                        <div class="mock-form-section__head"><span>1</span><div><h3>What service do you need?</h3></div></div>
-                        <div class="mock-service-grid">
-                            ${categories.slice(0, 6).map((item, index) => `
-                                <label class="mock-service-chip ${index === 0 ? "active" : ""}">
-                                    <input type="radio" name="category" value="${escapeHtml(item)}" ${index === 0 ? "checked" : ""}>
-                                    <i class="fa-solid ${categoryFaIcon(item)}"></i>
-                                    <span>${escapeHtml(item)}</span>
-                                </label>`).join("")}
-                        </div>
-                    </section>
-                    <section class="mock-form-section">
-                        <div class="mock-form-section__head"><span>2</span><div><h3>Describe your request</h3></div></div>
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Urgency</label><select class="form-select" name="urgency">${urgencies.map((item) => `<option>${escapeHtml(item)}</option>`).join("")}</select></div>
-                            <div class="col-md-6"><label class="form-label">Budget</label><input class="form-control" name="budget" placeholder="₱1,200"></div>
-                            <div class="col-12"><label class="form-label">Request details</label><textarea class="form-control" name="details" rows="4" required minlength="10" placeholder="Describe what you need done"></textarea></div>
-                        </div>
-                    </section>
-                    <section class="mock-form-section">
-                        <div class="mock-form-section__head"><span>3</span><div><h3>When and where?</h3></div></div>
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Preferred schedule</label><input class="form-control" name="preferred_schedule" placeholder="Today after 4 PM"></div>
-                            <div class="col-md-6"><label class="form-label">Service area</label><input class="form-control" name="area" value="${escapeHtml(areaValue)}" required></div>
-                        </div>
-                    </section>
-                    <section class="mock-form-section">
-                        <div class="mock-form-section__head"><span>4</span><div><h3>Media (optional)</h3></div></div>
-                        <label class="mock-upload-box">
-                            <input type="file" name="attachments" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple data-media-input>
-                            <i class="fa-solid fa-plus"></i>
-                            <span>Add photo or video</span>
-                        </label>
-                    </section>
-                    <label class="mock-check"><input type="checkbox" name="permission_to_forward" checked> Allow providers to see enough detail to quote accurately.</label>
-                    <div class="mock-form-actions">
-                        <button class="btn btn-outline-secondary" type="button" data-view-link="home">Cancel</button>
-                        <button class="btn btn-primary btn-lg" type="submit"><i class="fa-solid fa-paper-plane"></i> Post Request</button>
+        <div class="post-request-page">
+            <form data-client-post class="post-request-form">
+                <input type="hidden" name="urgency" value="Today">
+                <div class="post-mobile-head">
+                    <div>
+                        <h1>Post Service Request</h1>
+                        <p>Tell us what you need, we'll match you with the right pros.</p>
                     </div>
-                </form>
-            </div>
-            <aside class="col-xl-4">
-                <div class="mock-side-panel">
-                    <div class="mock-side-panel__success"><i class="fa-solid fa-circle-check"></i><div><strong>Ready to post</strong><p>Providers in your area will be notified once you submit.</p></div></div>
-                    <div class="mock-side-panel__tips">
-                        <strong><i class="fa-regular fa-lightbulb"></i> Tips</strong>
+                    <button type="button" data-view-link="home" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="post-page-head">
+                    <h1>Post a Service Request</h1>
+                    <p>Tell us what you need and we'll match you with the right providers.</p>
+                </div>
+
+                <section class="post-step">
+                    <h2><span>1</span> What service do you need?</h2>
+                    <div class="post-service-row">
+                        ${services.map(([label, fa], index) => `
+                            <label class="post-service-card post-service-card--${categoryTone(label)} ${index === 0 ? "is-selected" : ""}">
+                                <input type="radio" name="category" value="${escapeHtml(label)}" ${index === 0 ? "checked" : ""}>
+                                <i class="fa-solid ${fa}"></i>
+                                <strong>${escapeHtml(label)}</strong>
+                            </label>
+                        `).join("")}
+                    </div>
+                </section>
+
+                <section class="post-step">
+                    <h2><span>2</span> Describe your request</h2>
+                    <label class="post-field">
+                        <span>Request title</span>
+                        <input name="details_title" value="Fix leaking faucet in kitchen" maxlength="80">
+                        <em>28/80</em>
+                    </label>
+                    <label class="post-field">
+                        <span>Details <small>(the more details, the better offers you'll get)</small></span>
+                        <textarea name="details" rows="4" required minlength="10">My kitchen faucet keeps leaking even when it's closed.
+Please bring tools and replacement parts if needed.</textarea>
+                        <em>118/1000</em>
+                    </label>
+                    <div class="post-field-grid post-field-grid--budget">
+                        <label class="post-field">
+                            <span>Budget</span>
+                            <select name="budget_type"><option selected>Set a budget</option><option>Open budget</option><option>Get provider quote</option></select>
+                        </label>
+                        <label class="post-field">
+                            <span>Budget amount</span>
+                            <input name="budget" value="1,200">
+                        </label>
+                        <label class="post-check inline"><input type="checkbox" name="open_to_offers" value="1"> <span>Open to offers</span> <i class="fa-regular fa-circle-question"></i></label>
+                    </div>
+                </section>
+
+                <section class="post-step">
+                    <h2><span>3</span> When do you need this done?</h2>
+                    <div class="post-field-grid">
+                        <label class="post-field">
+                            <span>Preferred date</span>
+                            <input name="preferred_date" value="May 26, 2025">
+                            <i class="fa-regular fa-calendar"></i>
+                        </label>
+                        <label class="post-field">
+                            <span>Preferred time</span>
+                            <input name="preferred_schedule" value="Afternoon (1 PM - 5 PM)">
+                            <i class="fa-regular fa-clock"></i>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="post-step">
+                    <h2><span>4</span> Where is the service needed?</h2>
+                    <label class="post-field">
+                        <span>Service area</span>
+                        <input name="area" value="Makati City, Metro Manila" required>
+                        <i class="fa-solid fa-location-dot"></i>
+                    </label>
+                    <button class="post-location-row" type="button" data-toast="Location picker is coming soon.">
+                        <span><small>Exact job location</small><strong>123 Arnaiz Ave., San Lorenzo, Makati City</strong></span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <div class="post-map-preview">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <button type="button" data-toast="Map adjustment is coming soon.">Adjust on map <i class="fa-solid fa-crosshairs"></i></button>
+                    </div>
+                </section>
+
+                <section class="post-step">
+                    <h2><span>5</span> Media <small>(optional)</small> <em>Up to 3 files</em></h2>
+                    <div class="post-media-row">
+                        <div class="post-media-thumb"><i class="fa-solid fa-faucet-drip"></i><button type="button"><i class="fa-solid fa-xmark"></i></button><span>IMG_001.jpg<br>JPG · 2.4 MB</span></div>
+                        <div class="post-media-thumb"><i class="fa-solid fa-sink"></i><button type="button"><i class="fa-solid fa-xmark"></i></button><span>IMG_002.png<br>PNG · 1.8 MB</span></div>
+                        <div class="post-media-thumb"><i class="fa-solid fa-play"></i><button type="button"><i class="fa-solid fa-xmark"></i></button><span>Video_001.mp4<br>MP4 · 4.7 MB</span></div>
+                        <label class="post-media-add">
+                            <input type="file" name="attachments" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple data-media-input data-max="3">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add photo<br>or video</span>
+                        </label>
+                    </div>
+                    <p class="post-media-note">JPG, PNG, WebP, MP4, WebM · Max 3 files · Up to 50MB each</p>
+                </section>
+
+                <div class="post-consents">
+                    <label class="post-check"><input type="checkbox" name="permission_to_forward" checked> <span>Allow KAILA to forward my request to matching service providers.<small>This helps you receive more offers faster.</small></span> <i class="fa-regular fa-circle-question"></i></label>
+                    <label class="post-check"><input type="checkbox" name="consent_to_rate" checked> <span>I agree to be rated by providers and to rate my experience.</span> <i class="fa-regular fa-circle-question"></i></label>
+                </div>
+
+                <div class="post-form-actions">
+                    <button class="btn btn-outline-secondary" type="button" data-view-link="home">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Post Request <i class="fa-regular fa-paper-plane"></i></button>
+                </div>
+            </form>
+
+            <aside class="post-request-preview">
+                <section class="post-success-card">
+                    <span><i class="fa-solid fa-check"></i></span>
+                    <h2>Your request has been posted!</h2>
+                    <p>We're notifying nearby providers and you'll start receiving offers soon.</p>
+                </section>
+                <section class="post-summary-card">
+                    <span class="post-summary-image"><i class="fa-solid fa-faucet-drip"></i></span>
+                    <div>
+                        <strong>Fix leaking faucet in kitchen</strong>
+                        <small><i class="fa-solid fa-location-dot"></i> Makati City, Metro Manila</small>
+                        <small><i class="fa-regular fa-calendar"></i> May 26, 2025 · Afternoon (1 PM - 5 PM)</small>
+                        <small>Budget: ₱1,200 · <b>Open to offers</b></small>
+                    </div>
+                </section>
+                <div class="post-alert"><i class="fa-regular fa-bell"></i> You'll be notified when providers send you offers.</div>
+                <section class="post-status-card">
+                    <h3>Request Status</h3>
+                    ${[
+                        ["fa-check", "Request posted", "Just now", "done"],
+                        ["fa-paper-plane", "Finding matching providers", "In progress", "active"],
+                        ["fa-clock", "Offers incoming", "You'll be notified", ""],
+                        ["fa-user", "Select & hire a provider", "You're in control", ""],
+                    ].map(([fa, title, sub, state]) => `
+                        <div class="post-status-step ${state}">
+                            <span><i class="fa-solid ${fa}"></i></span>
+                            <div><strong>${title}</strong><small>${sub}</small></div>
+                        </div>
+                    `).join("")}
+                </section>
+                <section class="post-tips-card">
+                    <i class="fa-regular fa-lightbulb"></i>
+                    <div>
+                        <strong>Tips</strong>
                         <ul>
-                            <li>Add clear photos to get better offers.</li>
-                            <li>Include your preferred schedule and budget.</li>
-                            <li>Keep communication inside KAILA for safety.</li>
+                            <li>Keep your phone notifications on for faster updates.</li>
+                            <li>More details and photos = better offers.</li>
+                            <li>You can edit or cancel your request anytime.</li>
                         </ul>
                     </div>
-                </div>
+                </section>
+                <button class="btn btn-primary" type="button" data-view-link="requests"><i class="fa-regular fa-clipboard"></i> View My Requests</button>
+                <button class="btn btn-outline-primary" type="button" data-view-link="inbox"><i class="fa-regular fa-message"></i> Go to Messages</button>
             </aside>
         </div>`;
 }

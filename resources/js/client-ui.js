@@ -49,7 +49,9 @@ import {
 } from "./kaila-shared-screens.js";
 import {
     clientQuickActions,
+    clientHomeFallbackRequests,
     clientStatRow,
+    categoryTone,
     mockCategoryPills,
     mockHomeRequestRow,
     mockInboxShell,
@@ -57,6 +59,7 @@ import {
     mockPostRequestForm,
     mockRequestListCard,
     mockSearchBar,
+    sidebarTrustCard,
 } from "./kaila-mock-ui.js";
 import {
     avatar,
@@ -73,15 +76,24 @@ import {
 const area = () => store.user?.area || "Your area";
 const categories = () => store.categories || [];
 const urgencies = () => store.urgencies || [];
+let loadedClientJobMessagesFor = null;
+let loadedClientSupportFor = null;
+let loadedClientFeed = false;
 
 const navItems = [
     ["home", "Home", "fa-house", "/home"],
     ["feed", "Feed", "fa-rss", "/feed"],
     ["providers", "Providers", "fa-user-group", "/home#providers"],
-    ["inbox", "Inbox", "fa-comment-dots", "/messages"],
-    ["notifications", "Activity", "fa-clock-rotate-left", "/notifications"],
-    ["settings", "Settings", "fa-gear", "/settings"],
     ["requests", "My Requests", "fa-clipboard-list", "/jobs"],
+    ["bookings", "Bookings", "fa-calendar-check", "/bookings"],
+    ["inbox", "Messages", "fa-comment-dots", "/messages"],
+    ["notifications", "Activity", "fa-clock-rotate-left", "/notifications"],
+    ["favorites", "Favorites", "fa-heart", "/favorites"],
+    ["payments", "Payments", "fa-credit-card", "/payments"],
+    ["reviews", "Reviews", "fa-star", "/reviews"],
+    ["saved-providers", "Saved Providers", "fa-shield-heart", "/saved-providers"],
+    ["settings", "Settings", "fa-gear", "/settings"],
+    ["support", "Help Center", "fa-circle-question", "/support"],
     ["post", "Post Request", "fa-square-plus", "/post"],
     ["assistant", "Katabang", "fa-wand-magic-sparkles", "/assistant"],
     ["offers", "Offers", "fa-tags", "/jobs#offers"],
@@ -93,7 +105,7 @@ const navItems = [
     ["rating", "Rating", "fa-star", "/jobs#rating"],
     ["dispute", "Dispute", "fa-flag", "/support#dispute"],
     ["block", "Block", "fa-shield-halved", "/support#block"],
-    ["support", "Support", "fa-headset", "/support"],
+    ["support-detail", "Support", "fa-headset", "/support"],
     ["analytics", "Analytics", "fa-chart-line", "/settings#analytics"],
     ["validation", "Validation", "fa-clipboard-check", "/settings#validation"],
     ["delete", "Delete", "fa-trash", "/settings#delete"],
@@ -103,10 +115,15 @@ const routeViews = {
     "/home": "home",
     "/post": "post",
     "/jobs": "requests",
+    "/bookings": "bookings",
     "/feed": "feed",
     "/messages": "inbox",
     "/assistant": "assistant",
     "/notifications": "notifications",
+    "/favorites": "favorites",
+    "/payments": "payments",
+    "/reviews": "reviews",
+    "/saved-providers": "saved-providers",
     "/settings": "settings",
     "/support": "support",
 };
@@ -123,6 +140,11 @@ const subtitles = {
     settings: "Profile, preferences, and account.",
     feed: "Community updates from clients and providers.",
     assistant: "Ask Katabang for marketplace guidance.",
+    bookings: "Track upcoming and completed bookings.",
+    favorites: "Your saved posts, services, and providers.",
+    payments: "Payment methods, receipts, and credits.",
+    reviews: "Ratings and reviews from your service history.",
+    "saved-providers": "Providers you trust and want to hire again.",
 };
 
 function currentJob() {
@@ -150,20 +172,235 @@ function jobSummary(job) {
         </div>`);
 }
 
+function settingsRow({ iconName, tone = "blue", label, value = "", sub = "", view = "", danger = false, badge = "" }) {
+    const actionAttr = view ? `data-view-link="${view}"` : `data-toast="${escapeHtml(label)} settings are coming soon."`;
+    return `
+        <button class="settings-list-row ${danger ? "settings-list-row--danger" : ""}" type="button" ${actionAttr}>
+            <span class="settings-list-row__icon settings-list-row__icon--${tone}"><i class="fa-solid ${iconName}"></i></span>
+            <span class="settings-list-row__body">
+                <strong>${escapeHtml(label)}</strong>
+                ${sub ? `<small>${escapeHtml(sub)}</small>` : ""}
+            </span>
+            ${value ? `<em>${escapeHtml(value)}</em>` : ""}
+            ${badge ? `<b>${escapeHtml(badge)}</b>` : ""}
+            <i class="fa-solid fa-chevron-right settings-list-row__chev"></i>
+        </button>`;
+}
+
+function settingsToggleRow({ iconName, tone, label, checked = true }) {
+    return `
+        <button class="settings-list-row" type="button" data-toast="${escapeHtml(label)} updated.">
+            <span class="settings-list-row__icon settings-list-row__icon--${tone}"><i class="fa-solid ${iconName}"></i></span>
+            <span class="settings-list-row__body"><strong>${escapeHtml(label)}</strong></span>
+            <span class="settings-switch ${checked ? "is-on" : ""}" aria-hidden="true"><i></i></span>
+            <i class="fa-solid fa-chevron-right settings-list-row__chev"></i>
+        </button>`;
+}
+
+function settingsSection(title, rows) {
+    return `
+        <section class="settings-section-card">
+            <h2>${escapeHtml(title)}</h2>
+            <div class="settings-list">${rows.join("")}</div>
+        </section>`;
+}
+
+function demoClientRequestsList() {
+    return [
+        {
+            id: -201,
+            title: "Fix leaking faucet in kitchen",
+            description: "My kitchen faucet keeps leaking even when it's closed. Please bring tools and replacement parts if needed.",
+            status: "Offers Received",
+            statusLabel: "OFFERS RECEIVED",
+            category: "Plumbing",
+            icon: "fa-faucet-drip",
+            area: "Makati City, Metro Manila",
+            schedule: "May 26, 2025 · 1 PM - 5 PM",
+            budget: "₱1,200",
+            offers: "5",
+            activity: "10 mins ago",
+            mediaCount: 3,
+            tone: "blue",
+            actions: ["View Offers", "Edit Request", "Cancel Request"],
+        },
+        {
+            id: -202,
+            title: "Install additional outlet",
+            description: "Need an additional outlet near the TV area including wiring and installation.",
+            status: "Countered",
+            statusLabel: "COUNTERED",
+            category: "Electrical",
+            icon: "fa-bolt",
+            area: "Taguig City, Metro Manila",
+            schedule: "May 27, 2025 · 9 AM - 12 PM",
+            budget: "₱1,500",
+            provider: "Mark Electrical",
+            rating: "4.8",
+            activity: "1 hour ago",
+            mediaCount: 2,
+            tone: "orange",
+            actions: ["View Offers", "Chat with Provider", "View Details"],
+        },
+        {
+            id: -203,
+            title: "Home deep cleaning",
+            description: "3-bedroom apartment deep cleaning including kitchen and bathrooms.",
+            status: "In Progress",
+            statusLabel: "IN PROGRESS",
+            category: "Cleaning",
+            icon: "fa-bucket",
+            area: "Quezon City, Metro Manila",
+            schedule: "May 24, 2025 · 8 AM - 12 PM",
+            budget: "₱2,000",
+            provider: "Liza Cleaning",
+            rating: "4.9",
+            activity: "20 mins ago",
+            mediaCount: 2,
+            tone: "cyan",
+            progress: true,
+            actions: ["Open Chat", "Track Provider"],
+        },
+        {
+            id: -204,
+            title: "Unclog toilet",
+            description: "Toilet is clogged and water is not draining properly.",
+            status: "Provider Marked Done",
+            statusLabel: "PROVIDER MARKED DONE",
+            category: "Repair",
+            icon: "fa-screwdriver-wrench",
+            area: "Pasig City, Metro Manila",
+            schedule: "May 20, 2025 · 2 PM - 4 PM",
+            budget: "₱1,000",
+            provider: "Juan Plumbing",
+            rating: "4.7",
+            activity: "1 day ago",
+            mediaCount: 1,
+            tone: "green",
+            actions: ["Chat with Provider", "Confirm Completion", "Request Revision"],
+        },
+        {
+            id: -205,
+            title: "Aircon not cooling properly",
+            description: "AC is running but not cooling the room. Please check and repair.",
+            status: "Rated / Closed",
+            statusLabel: "RATED / CLOSED",
+            category: "Appliance Repair",
+            icon: "fa-fan",
+            area: "Mandaluyong City, Metro Manila",
+            schedule: "May 15, 2025 · 9 AM - 11 AM",
+            budget: "₱1,800",
+            provider: "Mike Aircon",
+            rating: "4.9",
+            activity: "3 days ago",
+            mediaCount: 3,
+            tone: "green",
+            rated: true,
+            actions: ["Rate Provider"],
+        },
+        {
+            id: -206,
+            title: "Wall repair and repaint",
+            description: "The wall paint is peeling off and needs repainting.",
+            status: "Disputed",
+            statusLabel: "DISPUTED",
+            category: "Painting",
+            icon: "fa-paint-roller",
+            area: "Manila City, Metro Manila",
+            schedule: "May 18, 2025 · 1 PM - 5 PM",
+            budget: "₱3,500",
+            provider: "PaintPro Services",
+            rating: "4.6",
+            activity: "5 hours ago",
+            mediaCount: 1,
+            tone: "red",
+            actions: ["Open Chat", "View Dispute", "Cancel Request"],
+        },
+    ];
+}
+
+function requestActionButton(label) {
+    const styles = {
+        "View Offers": ["offers", "fa-eye", "primary"],
+        "Edit Request": ["detail", "fa-pen", "primary"],
+        "Cancel Request": ["detail", "fa-xmark", "danger"],
+        "Chat with Provider": ["chat", "fa-message", "primary"],
+        "Open Chat": ["chat", "fa-message", "primary"],
+        "View Details": ["detail", "fa-circle-info", "neutral"],
+        "Track Provider": ["tracking", "fa-location-dot", "success"],
+        "Confirm Completion": ["completion", "fa-check", "success"],
+        "Request Revision": ["detail", "fa-clock-rotate-left", "warning"],
+        "Rate Provider": ["rating", "fa-star", "success"],
+        "View Dispute": ["dispute", "fa-triangle-exclamation", "danger"],
+    };
+    const [view, fa, tone] = styles[label] || ["detail", "fa-chevron-right", "neutral"];
+    return `<button class="request-action request-action--${tone}" type="button" data-view-link="${view}"><i class="fa-solid ${fa}"></i> ${escapeHtml(label)}</button>`;
+}
+
+function requestListCard(item) {
+    return `
+        <article class="requests-list-card requests-list-card--${item.tone}">
+            <div class="request-card-media">
+                <span class="request-card-media__icon service-icon service-icon--${categoryTone(item.category)}"><i class="fa-solid ${item.icon}"></i></span>
+                <span class="request-card-media__image service-visual service-visual--${categoryTone(item.category)}"><i class="fa-solid ${item.icon}"></i></span>
+                <b><i class="fa-solid fa-camera"></i> ${item.mediaCount}</b>
+            </div>
+            <div class="request-card-main">
+                <span class="request-status request-status--${item.tone}">${escapeHtml(item.statusLabel)}</span>
+                <h2>${escapeHtml(item.title)}</h2>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="request-meta-row">
+                    <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.area)}</span>
+                    <span><i class="fa-regular fa-calendar"></i> ${escapeHtml(item.schedule)}</span>
+                </div>
+                <div class="request-provider-row">
+                    ${item.provider ? `${avatar(item.provider, "small")} <span>${escapeHtml(item.provider)} ${item.rating ? `<i class="fa-solid fa-star"></i> ${escapeHtml(item.rating)}` : ""}</span>` : `<span class="request-offers-note">${escapeHtml(item.offers || "0")} offers</span>`}
+                </div>
+            </div>
+            <div class="request-card-side">
+                <div class="request-budget">
+                    <strong>${escapeHtml(item.budget)}</strong>
+                    <span>Budget</span>
+                    ${item.offers ? `<small>Offers<br><b>${escapeHtml(item.offers)}</b></small>` : ""}
+                </div>
+                <div class="request-activity">
+                    <span>Last activity</span>
+                    <strong><i class="fa-regular fa-clock"></i> ${escapeHtml(item.activity)}</strong>
+                </div>
+            </div>
+            <div class="request-card-actions">
+                ${item.progress ? `
+                    <div class="request-progress">
+                        ${["In Progress", "On the way", "Working", "Review", "Done"].map((step, index) => `<span class="${index === 0 ? "active" : ""}"><i></i>${step}</span>`).join("")}
+                    </div>
+                ` : ""}
+                ${item.rated ? `<div class="request-rated"><span>★★★★★</span><small>You rated on May 16</small></div>` : ""}
+                <div class="request-actions-row">${item.actions.map(requestActionButton).join("")}<button class="request-more" type="button" data-view-link="detail"><i class="fa-solid fa-ellipsis"></i></button></div>
+            </div>
+            <button class="request-card-open" type="button" data-view-link="detail" aria-label="Open request"><i class="fa-solid fa-chevron-right"></i></button>
+        </article>`;
+}
+
 const screens = {
     home() {
-        const recent = clientRequests().slice(0, 3);
-        const stats = clientMetrics();
+        const homeRequests = clientHomeFallbackRequests();
         return `
-            ${mockPageHero("", subtitles.home, store.user?.name)}
-            ${clientStatRow(stats)}
-            <div class="mock-home-section">${clientQuickActions(store.unreadNotifications || 0)}</div>
+            <div class="mock-home-hero-row">
+                <div class="mock-page-hero">
+                    <h1>Good morning, Alex! <span aria-hidden="true">👋</span></h1>
+                    <p>${escapeHtml(subtitles.home)}</p>
+                </div>
+                <button class="kaila-location-chip mock-home-location" type="button"><i class="fa-solid fa-location-dot"></i> Makati City <i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+            ${clientStatRow()}
+            <div class="mock-home-section">${clientQuickActions(5)}</div>
             <div class="mock-home-section">${mockSearchBar()}</div>
-            <div class="mock-home-section">${mockCategoryPills(categories())}</div>
+            <div class="mock-home-section">${mockCategoryPills()}</div>
             <div class="mock-home-section kaila-card">
                 ${sectionHead("Your Recent Requests", `<button class="mock-link-btn" type="button" data-view-link="requests">View all <i class="fa-solid fa-chevron-right"></i></button>`)}
-                ${recent.length ? recent.map((item) => mockHomeRequestRow(item, item.offers?.length ? "offers" : "detail")).join("") : `<p class="mock-empty">No requests yet. Post your first service need.</p>`}
+                ${homeRequests.map((item) => mockHomeRequestRow(item, item.offers?.length ? "offers" : "detail")).join("")}
             </div>
+            <div class="mock-home-mobile-safety">${sidebarTrustCard()}</div>
         `;
     },
     providers() {
@@ -180,6 +417,47 @@ const screens = {
                 </div>`).join("")}</div>` : card(`<p class="mock-empty">No providers listed yet.</p>`)}
         `;
     },
+    bookings() {
+        return `
+            ${mockPageHero("Bookings", subtitles.bookings)}
+            <div class="row g-3">
+                ${[
+                    ["Upcoming service", "Fix leaking faucet", "May 26, 2025 · Afternoon", "blue"],
+                    ["Pending confirmation", "Home deep cleaning", "Waiting for provider", "orange"],
+                    ["Completed", "Install additional outlet", "Rated 5.0", "green"],
+                ].map(([label, title, meta, tone]) => card(`
+                    ${pill(label, tone)}
+                    <h3 class="h6 mt-3 mb-1">${escapeHtml(title)}</h3>
+                    <p class="text-muted mb-0">${escapeHtml(meta)}</p>
+                `, "col-md-4")).join("")}
+            </div>`;
+    },
+    favorites() {
+        return `
+            ${mockPageHero("Favorites", subtitles.favorites)}
+            ${card(`<p class="mock-empty">Saved services, posts, and providers will appear here.</p>`)}
+        `;
+    },
+    payments() {
+        return `
+            ${mockPageHero("Payments", subtitles.payments)}
+            <div class="row g-3">
+                <div class="col-md-6">${card(`<h3 class="h6">Payment methods</h3><p class="text-muted mb-0">Add cards, wallets, and preferred payment options.</p>`)}</div>
+                <div class="col-md-6">${card(`<h3 class="h6">Receipts & credits</h3><p class="text-muted mb-0">Review receipts and KAILA credits from completed jobs.</p>`)}</div>
+            </div>`;
+    },
+    reviews() {
+        return `
+            ${mockPageHero("Reviews", subtitles.reviews)}
+            ${card(`<p class="mock-empty">Your ratings and provider reviews will appear after completed jobs.</p>`)}
+        `;
+    },
+    "saved-providers"() {
+        return `
+            ${mockPageHero("Saved Providers", subtitles["saved-providers"])}
+            ${card(`<p class="mock-empty">Save providers after comparing offers or completing jobs.</p>`)}
+        `;
+    },
     post() {
         return `
             ${mockPageHero("Post a Service Request", subtitles.post)}
@@ -187,19 +465,51 @@ const screens = {
         `;
     },
     requests() {
-        const items = clientRequests();
+        const items = demoClientRequestsList();
         return `
-            ${mockPageHero("My Requests", subtitles.requests)}
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div class="mock-filter-tabs">
-                    <button class="mock-filter-tab active" type="button">All (${items.length})</button>
-                    <button class="mock-filter-tab" type="button">Open</button>
-                    <button class="mock-filter-tab" type="button">Active</button>
-                    <button class="mock-filter-tab" type="button">Completed</button>
+            <section class="client-requests-page">
+                <div class="requests-mobile-top">
+                    <div>
+                        <img src="/assets/brand/kaila-logo.png" alt="KAILA">
+                        <h1>My Requests</h1>
+                        <p>Manage all your service requests</p>
+                    </div>
+                    <div class="requests-mobile-actions">
+                        <button type="button" data-view-link="notifications"><i class="fa-regular fa-bell"></i><b>3</b></button>
+                        ${avatar("Juan Dela Cruz", "", "")}
+                    </div>
                 </div>
-                <button class="btn btn-primary" type="button" data-view-link="post"><i class="fa-solid fa-plus"></i> Post Request</button>
-            </div>
-            ${items.length ? items.map((item) => mockRequestListCard(item, item.offers?.length ? "offers" : "detail")).join("") : `<div class="kaila-card"><p class="mock-empty">No requests yet.</p></div>`}
+                <div class="requests-page-head">
+                    <div>
+                        <h1>My Requests</h1>
+                        <p>Manage all your service requests in one place.</p>
+                    </div>
+                    <button class="btn btn-primary" type="button" data-view-link="post"><i class="fa-solid fa-plus"></i> Post Request</button>
+                </div>
+                <div class="requests-toolbar">
+                    <div class="requests-filter-tabs">
+                        ${[
+                            ["All", "18", "fa-table-cells", "active"],
+                            ["Open", "5", "fa-clipboard", ""],
+                            ["Active", "6", "fa-briefcase", ""],
+                            ["Completed", "5", "fa-circle-check", ""],
+                            ["Disputed", "2", "fa-circle-exclamation", ""],
+                        ].map(([label, count, fa, active]) => `<button class="${active}" type="button"><i class="fa-solid ${fa}"></i>${label}<b>${count}</b></button>`).join("")}
+                    </div>
+                    <div class="requests-sort">
+                        <span>Sort by:</span>
+                        <button type="button"><i class="fa-solid fa-filter"></i> Last activity <i class="fa-solid fa-chevron-down"></i></button>
+                        <button type="button" aria-label="Filter"><i class="fa-solid fa-sliders"></i></button>
+                    </div>
+                </div>
+                <div class="requests-list">
+                    ${items.map(requestListCard).join("")}
+                </div>
+                <footer class="requests-pagination">
+                    <span>Showing 1 to 6 of 18 requests</span>
+                    <div><button class="active">1</button><button>2</button><button>3</button><button><i class="fa-solid fa-chevron-right"></i></button><button><i class="fa-solid fa-angles-right"></i></button></div>
+                </footer>
+            </section>
         `;
     },
     offers() {
@@ -221,7 +531,7 @@ const screens = {
                     <button class="btn btn-primary" type="button" data-accept-offer="${offer.id}">Accept offer</button>
                 </div>
             `)).join("") : card(`<p class="mock-empty">No offers yet for this request.</p>`)}
-            </div>`;
+            </section>`;
     },
     detail() {
         const job = currentJob();
@@ -345,27 +655,71 @@ const screens = {
     },
     settings() {
         return `
-            ${mockPageHero("Profile & Settings", subtitles.settings)}
-            <div class="row g-4">
-                <div class="col-lg-8">${card(`
-                    <form data-client-profile>
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Full name</label><input class="form-control" name="name" value="${escapeHtml(store.user?.name || "")}"></div>
-                            <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="contact_number" value="${escapeHtml(store.user?.contact_number || "")}"></div>
-                            <div class="col-12"><label class="form-label">Default area</label><input class="form-control" name="area" value="${escapeHtml(store.user?.area || "")}"></div>
-                        </div>
-                        <button class="btn btn-primary mt-3" type="submit">Save changes</button>
-                    </form>
-                `)}</div>
-                <div class="col-lg-4">${card(`
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" type="button" data-view-link="support"><i class="fa-solid fa-headset"></i> Contact support</button>
-                        ${isStaffUser() ? `<button class="btn btn-outline-primary" type="button" data-view-link="analytics"><i class="fa-solid fa-chart-line"></i> Analytics</button>` : ""}
-                        ${isStaffUser() ? `<button class="btn btn-outline-primary" type="button" data-view-link="validation"><i class="fa-solid fa-clipboard-check"></i> Validation</button>` : ""}
-                        <button class="btn btn-outline-secondary" type="button" data-view-link="delete"><i class="fa-solid fa-trash"></i> Delete account</button>
-                        <button class="btn btn-danger" data-logout><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+            <section class="client-settings-page">
+                <div class="settings-mobile-title">
+                    <button type="button" data-view-link="home" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h1>Profile & Settings</h1>
+                </div>
+                <div class="settings-page-head">
+                    <h1>Profile & Settings</h1>
+                    <p>Manage your account, preferences, and privacy.</p>
+                </div>
+
+                <section class="settings-profile-card">
+                    <div class="settings-profile-card__avatar">
+                        <img src="/assets/registration/client-registration-illustration.png" alt="">
                     </div>
-                `)}</div>
+                    <div class="settings-profile-card__body">
+                        <h2>Juan Dela Cruz <span>Client</span></h2>
+                        <p>juandelacruz@gmail.com</p>
+                        <small>Member since May 24, 2025</small>
+                    </div>
+                    <button class="btn btn-outline-primary" type="button" data-toast="Edit profile is coming soon."><i class="fa-solid fa-pen"></i> Edit Profile</button>
+                    <i class="fa-solid fa-chevron-right settings-profile-card__mobile-chev"></i>
+                </section>
+
+                <div class="settings-grid">
+                    <div class="settings-column">
+                        ${settingsSection("Account & Contact", [
+                            settingsRow({ iconName: "fa-phone", tone: "blue", label: "Contact number", value: "+63 912 345 6789" }),
+                            settingsRow({ iconName: "fa-message", tone: "purple", label: "Messenger link", value: "m.me/juandelacruz" }),
+                            settingsRow({ iconName: "fa-phone-volume", tone: "green", label: "Preferred contact channel", value: "Messenger" }),
+                            settingsRow({ iconName: "fa-clock", tone: "violet", label: "Best contact time", value: "9:00 AM - 6:00 PM" }),
+                            settingsRow({ iconName: "fa-location-dot", tone: "red", label: "Address / Area", value: "Quezon City, Metro Manila" }),
+                        ])}
+
+                        ${settingsSection("Legal", [
+                            settingsRow({ iconName: "fa-shield-halved", tone: "blue", label: "Privacy Policy", view: "support" }),
+                            settingsRow({ iconName: "fa-file-lines", tone: "green", label: "Terms of Service", view: "support" }),
+                            settingsRow({ iconName: "fa-headset", tone: "purple", label: "Contact Support", view: "support" }),
+                        ])}
+                    </div>
+
+                    <div class="settings-column">
+                        ${settingsSection("Preferences", [
+                            settingsRow({ iconName: "fa-palette", tone: "purple", label: "Theme", value: "System" }),
+                            settingsToggleRow({ iconName: "fa-bell", tone: "blue", label: "Push notifications" }),
+                            settingsToggleRow({ iconName: "fa-envelope", tone: "green", label: "Email notifications" }),
+                        ])}
+
+                        ${settingsSection("Safety & Privacy", [
+                            settingsRow({ iconName: "fa-user-group", tone: "orange", label: "Blocked users", sub: "Manage users you've blocked.", badge: "2" }),
+                        ])}
+
+                        <section class="settings-section-card settings-danger-card">
+                            <h2>Danger Zone</h2>
+                            ${settingsRow({ iconName: "fa-trash-can", tone: "red", label: "Request account deletion", sub: "Permanently delete your account and all data.", view: "delete", danger: true })}
+                        </section>
+                    </div>
+                </div>
+
+                <div class="settings-security-banner">
+                    <span><i class="fa-solid fa-shield-halved"></i></span>
+                    <div>
+                        <strong>Your privacy and security are important to us.</strong>
+                        <p>We use industry-standard measures to protect your data and keep your account safe.</p>
+                    </div>
+                </div>
             </div>`;
     },
     delete() {
@@ -390,7 +744,7 @@ export function initClientApp() {
         routeViews,
         screens,
         storeActions: { selectRequest },
-        sidebarPostButton: false,
+        sidebarPostButton: true,
         sidebarPromos: false,
         topbarSearch: false,
         bottomNav: [
@@ -596,13 +950,16 @@ function bindClientScreenActions({ navigate, toast: showToast }) {
     });
 
     const job = currentJob();
-    if (document.querySelector("[data-client-chat]") && job) {
+    if (document.querySelector("[data-client-chat]") && job && loadedClientJobMessagesFor !== job.id) {
+        loadedClientJobMessagesFor = job.id;
         loadJobMessages(job.id).catch(() => {});
     }
-    if (document.querySelector("[data-client-support]") && store.supportDesk) {
+    if (document.querySelector("[data-client-support]") && store.supportDesk && loadedClientSupportFor !== store.supportDesk.id) {
+        loadedClientSupportFor = store.supportDesk.id;
         loadDirectMessages(store.supportDesk.id).catch(() => {});
     }
-    if (document.querySelector("[data-feed-compose]")) {
+    if (document.querySelector("[data-feed-compose]") && !loadedClientFeed) {
+        loadedClientFeed = true;
         loadFeed().catch(() => {});
     }
     if (document.querySelector("[data-refresh-analytics]")) {

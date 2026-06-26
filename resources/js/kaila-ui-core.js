@@ -180,11 +180,11 @@ export function createApp(options) {
         document.body.classList.add("kaila-auth");
         const logo = "/assets/brand/kaila-logo.png";
         const userName = store.user?.name || "KAILA User";
+        const displayUserName = role === "client" ? "Alex D." : userName;
         const userRole = store.user?.role || role;
         const unread = store.unreadNotifications || 0;
-        const area = store.user?.area || "Your area";
-        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post", "assistant", "requests", "support"]);
-        const primaryNav = navItems.filter(([id]) => !id.startsWith("_") && !hiddenNav.has(id)).slice(0, 6);
+        const hiddenNav = new Set(["offers", "detail", "chat", "call", "tracking", "completion", "rating", "dispute", "block", "delete", "analytics", "validation", "send-offer", "job-detail", "travel", "mark-done", "rate-client", "profile", "in-progress", "post"]);
+        const primaryNav = navItems.filter(([id]) => !id.startsWith("_") && !hiddenNav.has(id));
         const inboxUnread = store.unreadMessages || store.unreadNotifications || 0;
         const activityUnread = store.unreadNotifications || 0;
 
@@ -194,7 +194,7 @@ export function createApp(options) {
                     <a class="kaila-sidebar__brand" href="${navItems[0][3]}" data-view-link="${navItems[0][0]}">
                         <img src="${logo}" alt="KAILA">
                     </a>
-                    ${sidebarPostButton || ["requests", "post"].includes(activeView) ? `<button class="mock-post-btn" type="button" data-view-link="post"><i class="fa-solid fa-plus"></i> Post Request</button>` : ""}
+                    ${sidebarPostButton ? `<button class="mock-post-btn" type="button" data-view-link="post"><i class="fa-solid fa-plus"></i> Post Request</button>` : ""}
                     <nav class="kaila-nav" aria-label="Main navigation">
                         ${primaryNav.map(([id, label, iconName, , badge]) => {
                             const navBadge = badge
@@ -212,49 +212,53 @@ export function createApp(options) {
                     <div class="kaila-sidebar__extras">
                         ${sidebarExtras}
                         ${sidebarTrustCard()}
-                        ${sidebarPromos || ["requests", "settings"].includes(activeView) ? sidebarPromoCards() : ""}
+                        ${sidebarPromos ? sidebarPromoCards() : ""}
                     </div>
                 </aside>
                 <div class="kaila-main">
-                    <header class="kaila-topbar ${activeView === "home" ? "kaila-topbar--home" : ""}">
-                        ${topbarSearch || ["requests", "post", "inbox"].includes(activeView) ? `
-                            <div class="kaila-topbar__search-wrap">
-                                <div class="mock-search mock-search--header">
-                                    <i class="fa-solid fa-magnifying-glass"></i>
-                                    <input type="search" placeholder="Search for services, providers, or requests..." aria-label="Search">
-                                    <button class="mock-search__filter" type="button"><i class="fa-solid fa-sliders"></i> Filter</button>
-                                </div>
-                            </div>
-                        ` : showTopbarHeading() ? `<div class="kaila-topbar__left"><h1>${escapeHtml(screenTitle())}</h1>${screenSubtitle() ? `<p>${escapeHtml(screenSubtitle())}</p>` : ""}</div>` : `<div class="kaila-topbar__spacer"></div>`}
+                    <header class="kaila-topbar kaila-topbar--home">
+                        <a class="kaila-mobile-brand" href="${navItems[0][3]}" data-view-link="${navItems[0][0]}">
+                            <img src="${logo}" alt="KAILA">
+                        </a>
+                        <div class="kaila-topbar__spacer"></div>
                         <div class="kaila-topbar__actions">
-                            <button class="kaila-icon-btn" type="button" data-view-link="inbox" aria-label="Messages">
-                                ${icon("fa-comment-dots")}${unread ? `<span class="kaila-badge">${unread}</span>` : ""}
-                            </button>
                             <button class="kaila-icon-btn" type="button" data-view-link="notifications" aria-label="Notifications">
                                 ${icon("fa-bell")}${unread ? `<span class="kaila-badge">${unread}</span>` : ""}
                             </button>
-                            <div class="kaila-user-chip">
-                                ${avatar(userName, "", store.user?.social_photo_url || "")}
-                                <div>
-                                    <strong>${escapeHtml(userName)}</strong>
-                                    <small>${escapeHtml(userRole)}</small>
+                            <div class="dropdown">
+                                <button class="kaila-user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    ${avatar(displayUserName, "", role === "client" ? "" : store.user?.social_photo_url || "")}
+                                    <div>
+                                        <strong>${escapeHtml(displayUserName)}</strong>
+                                        <small>${escapeHtml(userRole)}</small>
+                                    </div>
+                                    ${icon("fa-chevron-down")}
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <button class="dropdown-item" type="button" data-view-link="settings"><i class="fa-solid fa-user-gear me-2"></i>Profile & Settings</button>
+                                    <button class="dropdown-item" type="button" data-view-link="notifications"><i class="fa-solid fa-bell me-2"></i>Activity</button>
+                                    <button class="dropdown-item" type="button" data-view-link="support"><i class="fa-solid fa-headset me-2"></i>Support</button>
+                                    <div class="dropdown-divider"></div>
+                                    <button class="dropdown-item text-danger" type="button" data-logout><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</button>
                                 </div>
-                                ${icon("fa-chevron-down")}
                             </div>
-                            <button class="kaila-location-chip" type="button"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(area)} <i class="fa-solid fa-chevron-down"></i></button>
                         </div>
                     </header>
                     <main class="kaila-content" data-screen></main>
                 </div>
             </div>
             <nav class="kaila-bottom-nav" aria-label="Mobile navigation">
-                ${bottomNav.map(([id, iconName, label, badge]) => `
+                ${bottomNav.map(([id, iconName, label, badge]) => {
+                    const navBadge = badge
+                        || (id === "inbox" && inboxUnread ? inboxUnread : "")
+                        || (id === "notifications" && activityUnread ? activityUnread : "");
+                    return `
                     <button class="kaila-bottom-nav__item ${id === activeView ? "active" : ""}" type="button" data-view-link="${id}">
                         ${icon(iconName)}
-                        ${badge ? `<span class="kaila-badge">${badge}</span>` : ""}
+                        ${navBadge ? `<span class="kaila-badge">${navBadge}</span>` : ""}
                         <span>${label}</span>
-                    </button>
-                `).join("")}
+                    </button>`;
+                }).join("")}
             </nav>
             ${fabView ? `<button class="kaila-fab" type="button" data-view-link="${fabView}" aria-label="Quick action">${icon(fabIcon)}</button>` : ""}
         `;
